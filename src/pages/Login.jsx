@@ -32,7 +32,7 @@ export default function Login() {
         style={{ background: 'linear-gradient(160deg, #0a1628 0%, #0f2044 60%, #1a3a6e 100%)' }}>
         <div>
           <div className="text-white font-bold text-3xl tracking-tight">ARIA</div>
-          <div className="text-navy-300 text-sm mt-1 tracking-wide">Personal Finance</div>
+          <div className="text-navy-300 text-sm mt-1 tracking-wide">Your Money Intelligence</div>
         </div>
 
         <div>
@@ -59,7 +59,7 @@ export default function Login() {
           </div>
         </div>
 
-        <div className="text-navy-600 text-xs">ARIA Personal v0.1 · Built with ❤️ from Hyderabad</div>
+        <div className="text-navy-600 text-xs">ARIA Personal v0.1 · Made with Love in Hyderabad</div>
       </div>
 
       {/* Right panel — form */}
@@ -67,8 +67,7 @@ export default function Login() {
         {/* Mobile logo */}
         <div className="lg:hidden text-center mb-10">
           <div className="text-navy-950 font-bold text-3xl tracking-tight">ARIA</div>
-          <div className="text-gray-500 text-sm mt-1">Personal Finance</div>
-          <p className="text-gray-400 text-xs mt-2">Your money, working smarter.</p>
+          <div className="text-gray-500 text-sm mt-1">Your Money Intelligence</div>
         </div>
 
         <div className="w-full max-w-sm">
@@ -141,7 +140,7 @@ export default function Login() {
           </div>
 
           <div className="lg:hidden text-center mt-8 text-gray-300 text-xs">
-            ARIA Personal v0.1 · Built with ❤️ from Hyderabad
+            ARIA Personal v0.1 · Made with Love in Hyderabad
           </div>
         </div>
       </div>
