@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { Loader2 } from 'lucide-react'
+import ARIALogo from '../components/ARIALogo'
 
 export default function Login() {
   const { login } = useAuth()
@@ -31,7 +32,7 @@ export default function Login() {
       <div className="hidden lg:flex flex-col justify-between w-1/2 px-16 py-14"
         style={{ background: 'linear-gradient(160deg, #0a1628 0%, #0f2044 60%, #1a3a6e 100%)' }}>
         <div>
-          <div className="text-white font-bold text-5xl tracking-tight">ARIA</div>
+          <ARIALogo className="text-white font-bold text-5xl tracking-tight" />
           <div className="text-blue-300 text-4xl font-bold mt-1 leading-tight">Your Money Intelligence!</div>
         </div>
 
@@ -66,7 +67,7 @@ export default function Login() {
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 bg-gray-50">
         {/* Mobile logo */}
         <div className="lg:hidden text-center mb-10">
-          <div className="text-navy-950 font-bold text-5xl tracking-tight">ARIA</div>
+          <ARIALogo className="text-navy-950 font-bold text-5xl tracking-tight" />
           <div className="text-navy-700 text-4xl font-bold mt-1">Your Money Intelligence!</div>
         </div>
 

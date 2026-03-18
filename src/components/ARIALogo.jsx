@@ -1,0 +1,24 @@
+// ARIA brand name: round dot on i in brand blue
+export default function ARIALogo({ className = '', style = {} }) {
+  return (
+    <span className={className} style={{ display: 'inline-flex', alignItems: 'baseline', ...style }}>
+      {'AR'}
+      <span style={{ position: 'relative', display: 'inline-block', lineHeight: 'inherit' }}>
+        ı
+        <span style={{
+          position: 'absolute',
+          left: '50%',
+          top: '0.05em',
+          transform: 'translateX(-50%)',
+          width: '0.2em',
+          height: '0.2em',
+          borderRadius: '50%',
+          background: '#1D6FDB',
+          display: 'block',
+          pointerEvents: 'none',
+        }} />
+      </span>
+      {'A'}
+    </span>
+  )
+}
