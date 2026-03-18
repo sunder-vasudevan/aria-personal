@@ -28,6 +28,7 @@ export const updateGoal = (id, data) => api.put(`/personal/goals/${id}`, data).t
 export const deleteGoal = (id) => api.delete(`/personal/goals/${id}`)
 export const getGoalProjection = (params) =>
   api.get('/personal/goals/projection', { params }).then(r => r.data)
+export const simulateGoal = (data) => api.post('/personal/goals/simulate', data).then(r => r.data)
 
 // ─── Life Events ─────────────────────────────────────────────────────────────
 export const getLifeEvents = () => api.get('/personal/life-events').then(r => r.data)

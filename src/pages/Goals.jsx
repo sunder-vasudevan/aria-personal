@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { getGoals, createGoal, updateGoal, deleteGoal, getGoalProjection, fmt } from '../api/personal'
+import { getGoals, createGoal, updateGoal, deleteGoal, getGoalProjection, simulateGoal, fmt } from '../api/personal'
 import { Target, AlertCircle, TrendingUp, TrendingDown, SlidersHorizontal, Plus, Pencil, Trash2, X, Loader2, Info } from 'lucide-react'
 
 function ProbabilityRing({ pct }) {
@@ -44,7 +44,37 @@ const INPUT = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:
 
 function GoalForm({ initial, onSave, onCancel, saving, error }) {
   const [form, setForm] = useState(initial || { goal_name: '', target_amount: '', target_date: '', monthly_sip: '' })
+  const [sim, setSim] = useState(null)
+  const [simLoading, setSimLoading] = useState(false)
+  const simDebounce = useRef(null)
+
   const set = (f, v) => setForm(s => ({ ...s, [f]: v }))
+
+  const runSim = useCallback((f) => {
+    const amount = parseFloat(f.target_amount)
+    const sip = parseFloat(f.monthly_sip) || 0
+    if (!amount || amount <= 0 || !f.target_date) { setSim(null); return }
+    clearTimeout(simDebounce.current)
+    simDebounce.current = setTimeout(async () => {
+      setSimLoading(true)
+      try {
+        const result = await simulateGoal({ target_amount: amount, target_date: f.target_date, monthly_sip: sip })
+        setSim(result)
+      } catch { setSim(null) } finally { setSimLoading(false) }
+    }, 600)
+  }, [])
+
+  const handleChange = (f, v) => {
+    const next = { ...form, [f]: v }
+    setForm(next)
+    runSim(next)
+  }
+
+  const pct = sim?.probability_pct ?? null
+  const color = pct == null ? '#9ca3af' : pct >= 80 ? '#10b981' : pct >= 70 ? '#f59e0b' : '#ef4444'
+  const textColor = pct == null ? 'text-gray-400' : pct >= 80 ? 'text-emerald-600' : pct >= 70 ? 'text-amber-600' : 'text-red-600'
+  const r = 22, circ = 2 * Math.PI * r, filled = pct != null ? (pct / 100) * circ : 0
+
   return (
     <div className="border-t border-gray-100 mt-3 pt-3 space-y-3">
       <div>
@@ -54,17 +84,61 @@ function GoalForm({ initial, onSave, onCancel, saving, error }) {
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Target Amount (₹) *</label>
-          <input type="number" min="0" value={form.target_amount} onChange={e => set('target_amount', e.target.value)} placeholder="e.g. 2000000" className={INPUT} />
+          <input type="number" min="0" value={form.target_amount} onChange={e => handleChange('target_amount', e.target.value)} placeholder="e.g. 2000000" className={INPUT} />
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Target Date *</label>
-          <input type="date" value={form.target_date} onChange={e => set('target_date', e.target.value)} className={INPUT} />
+          <input type="date" value={form.target_date} onChange={e => handleChange('target_date', e.target.value)} className={INPUT} />
         </div>
       </div>
       <div>
         <label className="block text-xs font-medium text-gray-600 mb-1">Monthly SIP (₹)</label>
-        <input type="number" min="0" value={form.monthly_sip} onChange={e => set('monthly_sip', e.target.value)} placeholder="e.g. 10000" className={INPUT} />
+        <input type="number" min="0" value={form.monthly_sip} onChange={e => handleChange('monthly_sip', e.target.value)} placeholder="e.g. 10000" className={INPUT} />
       </div>
+
+      {/* Live what-if preview */}
+      {(sim || simLoading) && (
+        <div className="rounded-xl border border-gray-200 overflow-hidden">
+          <div className="px-3 py-2 bg-gray-50 flex items-center justify-between border-b border-gray-100">
+            <span className="text-xs font-semibold text-gray-600">Live Preview</span>
+            {simLoading && <Loader2 size={12} className="text-navy-500 animate-spin" />}
+          </div>
+          {sim && (
+            <div className="px-3 py-3 bg-white flex items-center gap-4">
+              <div className="flex flex-col items-center flex-shrink-0">
+                <div className="relative w-14 h-14">
+                  <svg className="w-full h-full -rotate-90" viewBox="0 0 52 52">
+                    <circle cx="26" cy="26" r={r} fill="none" stroke="#f3f4f6" strokeWidth="4" />
+                    <circle cx="26" cy="26" r={r} fill="none" stroke={color} strokeWidth="4"
+                      strokeDasharray={`${filled} ${circ - filled}`} strokeLinecap="round" />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className={`text-xs font-bold ${textColor}`}>{pct.toFixed(0)}%</span>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-400 text-center mt-1 leading-tight">success<br/>chance</p>
+              </div>
+              <div className="flex-1 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                <span className="text-gray-500">Inflation-adj. target</span>
+                <span className="tabular-nums text-right font-semibold text-navy-700">{fmt.inr(sim.real_target)}</span>
+                <span className="text-gray-500">Required SIP</span>
+                <span className={`tabular-nums text-right font-bold ${sim.required_sip > (parseFloat(form.monthly_sip) || 0) ? 'text-red-600' : 'text-emerald-600'}`}>
+                  {fmt.inr(sim.required_sip)}/mo
+                </span>
+                {sim.required_sip > (parseFloat(form.monthly_sip) || 0) && (
+                  <>
+                    <span className="text-gray-500">Gap</span>
+                    <span className="tabular-nums text-right font-semibold text-red-600">
+                      +{fmt.inr(sim.required_sip - (parseFloat(form.monthly_sip) || 0))}/mo
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {error && <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</div>}
       <div className="flex gap-2">
         <button type="button" onClick={onCancel} className="flex-1 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">Cancel</button>
