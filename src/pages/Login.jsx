@@ -79,6 +79,30 @@ export default function Login() {
             Create an account
           </Link>
         </p>
+
+        {/* Demo credentials */}
+        <div className="mt-6 bg-white rounded-2xl border border-gray-200 p-4">
+          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Demo Accounts</div>
+          {[
+            { name: 'Joshua Pearce', email: 'joshua2@aria.demo', label: '🟢 On track' },
+            { name: 'Rubén Cervantes', email: 'ruben@aria.demo', label: '🔴 Needs attention' },
+            { name: 'Kate McKenna', email: 'kate@aria.demo', label: '🔴 Goals at risk' },
+          ].map(u => (
+            <button
+              key={u.email}
+              onClick={() => setForm({ email: u.email, password: 'demo1234' })}
+              className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-colors mb-1 last:mb-0"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-semibold text-gray-800">{u.name}</div>
+                  <div className="text-xs text-gray-400">{u.email} · demo1234</div>
+                </div>
+                <span className="text-xs">{u.label}</span>
+              </div>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   )
