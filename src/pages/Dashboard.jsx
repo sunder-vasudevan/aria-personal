@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { useAuth } from '../auth/useAuth'
 import { getPortfolio, getGoals, fmt } from '../api/personal'
-import { TrendingUp, Target, Plus, ChevronRight, AlertCircle } from 'lucide-react'
+import { TrendingUp, Target, Plus, ChevronRight, AlertCircle, Pencil } from 'lucide-react'
+import PortfolioEditor from '../components/PortfolioEditor'
 
 const CATEGORY_COLORS = {
   'Large Cap': '#1e4fff', 'Flexi Cap': '#0c2db4', 'Mid Cap': '#4c7bff',
@@ -36,12 +37,15 @@ export default function Dashboard() {
   const [portfolio, setPortfolio] = useState(null)
   const [goals, setGoals] = useState([])
   const [loading, setLoading] = useState(true)
+  const [editing, setEditing] = useState(false)
 
-  useEffect(() => {
-    Promise.all([getPortfolio(), getGoals()])
+  function load() {
+    return Promise.all([getPortfolio(), getGoals()])
       .then(([p, g]) => { setPortfolio(p); setGoals(g) })
       .finally(() => setLoading(false))
-  }, [])
+  }
+
+  useEffect(() => { load() }, [])
 
   const chartData = portfolio?.holdings?.map(h => ({
     name: h.fund_name,
@@ -50,6 +54,14 @@ export default function Dashboard() {
   })) || []
 
   const urgentGoals = goals.filter(g => g.probability_pct < 70)
+
+  if (editing) return (
+    <PortfolioEditor
+      portfolio={portfolio}
+      onClose={() => setEditing(false)}
+      onSaved={() => { setEditing(false); setLoading(true); load() }}
+    />
+  )
 
   if (loading) return (
     <div className="space-y-4 animate-pulse">
@@ -74,9 +86,14 @@ export default function Dashboard() {
               <div className="text-xs font-medium text-gray-400 uppercase tracking-wider">Total Portfolio</div>
               <div className="text-3xl font-bold text-gray-900 tabular-nums mt-0.5">{fmt.inr(portfolio.total_value)}</div>
             </div>
-            <Link to="/goals" className="flex items-center gap-1 text-xs font-medium text-navy-600 hover:underline">
-              <TrendingUp size={13} /> View Goals
-            </Link>
+            <div className="flex items-center gap-3">
+              <button onClick={() => setEditing(true)} className="flex items-center gap-1 text-xs font-medium text-navy-600 hover:underline">
+                <Pencil size={12} /> Edit
+              </button>
+              <Link to="/goals" className="flex items-center gap-1 text-xs font-medium text-navy-600 hover:underline">
+                <TrendingUp size={13} /> Goals
+              </Link>
+            </div>
           </div>
 
           {/* Donut chart */}
@@ -123,12 +140,12 @@ export default function Dashboard() {
           <div className="text-3xl mb-3">📊</div>
           <div className="text-sm font-semibold text-gray-600 mb-1">No portfolio yet</div>
           <p className="text-xs text-gray-400 mb-4">Add your mutual funds and investments to get started.</p>
-          <Link
-            to="/goals"
+          <button
+            onClick={() => setEditing(true)}
             className="inline-flex items-center gap-1.5 px-4 py-2 bg-navy-950 text-white text-sm font-semibold rounded-xl hover:bg-navy-800 transition-colors"
           >
             <Plus size={14} /> Add Portfolio
-          </Link>
+          </button>
         </div>
       )}
 
