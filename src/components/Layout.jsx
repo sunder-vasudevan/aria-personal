@@ -1,12 +1,13 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
-import { LayoutDashboard, Target, CalendarHeart, MessageSquare, LogOut } from 'lucide-react'
+import { LayoutDashboard, Target, CalendarHeart, MessageSquare, LogOut, HelpCircle } from 'lucide-react'
 
 const NAV = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/goals', label: 'Goals', icon: Target },
   { to: '/life-events', label: 'Life Events', icon: CalendarHeart },
   { to: '/copilot', label: 'Ask ARIA', icon: MessageSquare },
+  { to: '/help', label: 'Help', icon: HelpCircle },
 ]
 
 export default function Layout({ children }) {
