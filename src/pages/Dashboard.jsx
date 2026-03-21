@@ -32,6 +32,18 @@ function AllocationBar({ label, current, target, color }) {
   )
 }
 
+function ProbabilityPill({ pct }) {
+  if (pct >= 80) return (
+    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-teal-100 text-teal-700 tabular-nums">{pct.toFixed(0)}%</span>
+  )
+  if (pct >= 60) return (
+    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 tabular-nums">{pct.toFixed(0)}%</span>
+  )
+  return (
+    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-700 tabular-nums">{pct.toFixed(0)}%</span>
+  )
+}
+
 export default function Dashboard() {
   const { user } = useAuth()
   const [portfolio, setPortfolio] = useState(null)
@@ -54,6 +66,7 @@ export default function Dashboard() {
   })) || []
 
   const urgentGoals = goals.filter(g => g.probability_pct < 70)
+  const firstName = user?.display_name?.split(' ')[0] || 'there'
 
   if (editing) return (
     <PortfolioEditor
@@ -65,7 +78,7 @@ export default function Dashboard() {
 
   if (loading) return (
     <div className="space-y-4 animate-pulse">
-      <div className="h-8 bg-gray-200 rounded-xl w-48" />
+      <div className="h-32 bg-gray-200 rounded-2xl" />
       <div className="h-48 bg-gray-200 rounded-2xl" />
       <div className="h-32 bg-gray-200 rounded-2xl" />
     </div>
@@ -73,30 +86,47 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6 pb-8">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Hi, {user?.display_name?.split(' ')[0]} 👋</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Here's how your finances look today.</p>
+
+      {/* ── Gradient hero ── */}
+      <div className="bg-gradient-to-br from-[#1D6FDB] to-blue-700 rounded-2xl p-6 text-white">
+        <div className="text-2xl font-bold">Hi, {firstName} 👋</div>
+        <div className="text-blue-100 text-sm mt-0.5">
+          {new Date().toLocaleDateString('en-IN', { weekday: 'long', month: 'long', day: 'numeric' })}
+        </div>
+        {urgentGoals.length > 0 && (
+          <div className="mt-3 inline-flex items-center gap-2 bg-white/20 rounded-lg px-3 py-1.5">
+            <AlertCircle size={13} />
+            <span className="text-sm font-medium">
+              {urgentGoals.length} goal{urgentGoals.length !== 1 ? 's' : ''} need attention
+            </span>
+          </div>
+        )}
+        {urgentGoals.length === 0 && goals.length > 0 && (
+          <div className="mt-3 inline-flex items-center gap-2 bg-white/20 rounded-lg px-3 py-1.5">
+            <Target size={13} />
+            <span className="text-sm font-medium">All goals on track</span>
+          </div>
+        )}
       </div>
 
-      {/* Portfolio summary */}
+      {/* ── Portfolio summary ── */}
       {portfolio ? (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-card p-5">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
           <div className="flex items-start justify-between mb-4">
             <div>
               <div className="text-xs font-medium text-gray-400 uppercase tracking-wider">Total Portfolio</div>
               <div className="text-3xl font-bold text-gray-900 tabular-nums mt-0.5">{fmt.inr(portfolio.total_value)}</div>
             </div>
             <div className="flex items-center gap-3">
-              <button onClick={() => setEditing(true)} className="flex items-center gap-1 text-xs font-medium text-navy-600 hover:underline">
+              <button onClick={() => setEditing(true)} className="flex items-center gap-1 text-xs font-medium text-[#1D6FDB] hover:underline">
                 <Pencil size={12} /> Edit
               </button>
-              <Link to="/goals" className="flex items-center gap-1 text-xs font-medium text-navy-600 hover:underline">
+              <Link to="/goals" className="flex items-center gap-1 text-xs font-medium text-[#1D6FDB] hover:underline">
                 <TrendingUp size={13} /> Goals
               </Link>
             </div>
           </div>
 
-          {/* Donut chart */}
           {chartData.length > 0 && (
             <div className="flex flex-col sm:flex-row items-center gap-4 mb-5">
               <div className="w-40 h-40 flex-shrink-0">
@@ -119,7 +149,6 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Holdings list */}
           <div className="space-y-2">
             {portfolio.holdings.map(h => (
               <div key={h.id} className="flex items-center justify-between py-2 border-t border-gray-50 first:border-0">
@@ -136,36 +165,54 @@ export default function Dashboard() {
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-dashed border-gray-300 p-8 text-center">
+        <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-8 text-center">
           <div className="text-3xl mb-3">📊</div>
           <div className="text-sm font-semibold text-gray-600 mb-1">No portfolio yet</div>
           <p className="text-xs text-gray-400 mb-4">Add your mutual funds and investments to get started.</p>
           <button
             onClick={() => setEditing(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-navy-950 text-white text-sm font-semibold rounded-xl hover:bg-navy-800 transition-colors"
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#1D6FDB] text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors"
           >
             <Plus size={14} /> Add Portfolio
           </button>
         </div>
       )}
 
-      {/* Urgent goals */}
-      {urgentGoals.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <AlertCircle size={15} className="text-amber-600" />
-            <span className="text-sm font-semibold text-amber-800">Goals needing attention</span>
+      {/* ── Goals section ── */}
+      {goals.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Target size={15} className="text-[#1D6FDB]" />
+              <span className="text-sm font-semibold text-gray-900">Your Goals</span>
+            </div>
+            <Link to="/goals" className="text-xs text-[#1D6FDB] font-medium hover:underline flex items-center gap-0.5">
+              View all <ChevronRight size={13} />
+            </Link>
           </div>
-          <div className="space-y-2">
-            {urgentGoals.map(g => (
-              <Link key={g.id} to="/goals" className="flex items-center justify-between bg-white rounded-xl px-3 py-2.5 border border-amber-100 hover:border-amber-300 transition-colors">
-                <div>
-                  <div className="text-sm font-semibold text-gray-900">{g.goal_name}</div>
-                  <div className="text-xs text-gray-500">{fmt.inr(g.target_amount)} · {new Date(g.target_date).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}</div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {goals.slice(0, 4).map(g => (
+              <Link
+                key={g.id}
+                to="/goals"
+                className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:shadow-card-hover transition-all"
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div className="text-sm font-semibold text-gray-900 leading-tight flex-1 mr-2">{g.goal_name}</div>
+                  <ProbabilityPill pct={g.probability_pct} />
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-red-600 tabular-nums">{g.probability_pct.toFixed(0)}%</span>
-                  <ChevronRight size={14} className="text-gray-400" />
+                <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mb-2">
+                  <div
+                    className={`h-full rounded-full transition-all ${
+                      g.probability_pct >= 80 ? 'bg-teal-500' :
+                      g.probability_pct >= 60 ? 'bg-amber-500' : 'bg-rose-500'
+                    }`}
+                    style={{ width: `${Math.min(g.probability_pct, 100)}%` }}
+                  />
+                </div>
+                <div className="text-xs text-gray-400">
+                  {fmt.inr(g.target_amount)} · {new Date(g.target_date).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
                 </div>
               </Link>
             ))}
@@ -173,24 +220,17 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Goals summary */}
-      {goals.length > 0 && urgentGoals.length === 0 && (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-card p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Target size={15} className="text-navy-600" />
-              <span className="text-sm font-semibold text-gray-900">Goals on track</span>
-            </div>
-            <Link to="/goals" className="text-xs text-navy-600 font-medium hover:underline">View all</Link>
-          </div>
-          <div className="space-y-1.5">
-            {goals.slice(0, 3).map(g => (
-              <div key={g.id} className="flex items-center justify-between text-xs">
-                <span className="text-gray-700">{g.goal_name}</span>
-                <span className="font-bold text-emerald-600 tabular-nums">{g.probability_pct.toFixed(0)}%</span>
-              </div>
-            ))}
-          </div>
+      {goals.length === 0 && (
+        <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-6 text-center">
+          <div className="text-2xl mb-2">🎯</div>
+          <div className="text-sm font-semibold text-gray-600 mb-1">No goals yet</div>
+          <p className="text-xs text-gray-400 mb-3">Set financial goals to track your progress.</p>
+          <Link
+            to="/goals"
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#1D6FDB] text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors"
+          >
+            <Plus size={14} /> Add a Goal
+          </Link>
         </div>
       )}
     </div>
