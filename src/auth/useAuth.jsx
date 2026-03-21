@@ -29,8 +29,8 @@ export function AuthProvider({ children }) {
     return data
   }
 
-  const register = async (email, password, display_name) => {
-    const data = await apiRegister({ email, password, display_name })
+  const register = async (email, password, display_name, referral_code = null) => {
+    const data = await apiRegister({ email, password, display_name, ...(referral_code ? { referral_code } : {}) })
     localStorage.setItem('aria_personal_token', data.access_token)
     setUser(data.user)
     return data
