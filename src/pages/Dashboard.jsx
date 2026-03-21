@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { useAuth } from '../auth/useAuth'
-import { getPortfolio, getGoals, fmt, linkAdvisor } from '../api/personal'
-import { TrendingUp, Target, Plus, ChevronRight, AlertCircle, Pencil, Link2 } from 'lucide-react'
+import { getPortfolio, getGoals, fmt } from '../api/personal'
+import { TrendingUp, Target, Plus, ChevronRight, AlertCircle, Pencil } from 'lucide-react'
 import PortfolioEditor from '../components/PortfolioEditor'
 
 const CATEGORY_COLORS = {
@@ -44,64 +44,9 @@ function ProbabilityPill({ pct }) {
   )
 }
 
-function AdvisorLinkCard({ onLinked }) {
-  const [code, setCode] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [result, setResult] = useState(null)
-  const [error, setError] = useState(null)
-
-  const handleLink = async () => {
-    if (!code.trim()) return
-    setSaving(true); setError(null)
-    try {
-      const r = await linkAdvisor(code.trim())
-      setResult(r)
-      onLinked()
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Invalid code. Please check with your advisor.')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  if (result) return (
-    <div className="bg-teal-50 border border-teal-200 rounded-2xl p-4">
-      <div className="text-teal-700 font-semibold text-sm">Linked to {result.advisor_name} · {result.advisor_city}</div>
-      {result.client_linked && <div className="text-teal-600 text-xs mt-1">Your advisor can now see your portfolio.</div>}
-    </div>
-  )
-
-  return (
-    <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-      <div className="flex items-center gap-2 mb-3">
-        <Link2 size={15} className="text-[#1D6FDB]" />
-        <span className="text-sm font-semibold text-gray-800">Link to your advisor</span>
-      </div>
-      <p className="text-xs text-gray-500 mb-3">Enter the referral code your advisor gave you to connect your account.</p>
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={code}
-          onChange={e => setCode(e.target.value.toUpperCase())}
-          placeholder="e.g. RAHUL01"
-          maxLength={20}
-          className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-300"
-        />
-        <button
-          onClick={handleLink}
-          disabled={saving || !code.trim()}
-          className="px-4 py-2 bg-[#1D6FDB] text-white text-sm font-semibold rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors"
-        >
-          {saving ? '…' : 'Link'}
-        </button>
-      </div>
-      {error && <div className="text-xs text-red-600 mt-2">{error}</div>}
-    </div>
-  )
-}
 
 export default function Dashboard() {
-  const { user, refreshUser } = useAuth()
+  const { user } = useAuth()
   const [portfolio, setPortfolio] = useState(null)
   const [goals, setGoals] = useState([])
   const [loading, setLoading] = useState(true)
@@ -113,11 +58,7 @@ export default function Dashboard() {
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => {
-    load()
-    // Refresh user context on mount to pick up advisor_id from DB (covers null vs undefined)
-    refreshUser()
-  }, [])
+  useEffect(() => { load() }, [])
 
   const chartData = portfolio?.holdings?.map(h => ({
     name: h.fund_name,
@@ -146,11 +87,6 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6 pb-8">
-
-      {/* ── Advisor link prompt (self-signed users without an advisor) ── */}
-      {user && !user.advisor_id && (
-        <AdvisorLinkCard onLinked={refreshUser} />
-      )}
 
       {/* ── Gradient hero ── */}
       <div className="bg-gradient-to-br from-[#1D6FDB] to-blue-700 rounded-2xl p-6 text-white">

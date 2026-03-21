@@ -9,6 +9,7 @@ import Goals from './pages/Goals'
 import LifeEvents from './pages/LifeEvents'
 import Copilot from './pages/Copilot'
 import Help from './pages/Help'
+import Profile from './pages/Profile'
 
 function ProtectedLayout({ children }) {
   return (
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="/life-events" element={<ProtectedLayout><LifeEvents /></ProtectedLayout>} />
           <Route path="/copilot" element={<ProtectedLayout><Copilot /></ProtectedLayout>} />
           <Route path="/help" element={<ProtectedLayout><Help /></ProtectedLayout>} />
+          <Route path="/profile" element={<ProtectedLayout><Profile /></ProtectedLayout>} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>

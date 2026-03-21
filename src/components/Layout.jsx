@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
-import { LayoutDashboard, Target, CalendarHeart, MessageSquare, LogOut, HelpCircle } from 'lucide-react'
+import { LayoutDashboard, Target, CalendarHeart, MessageSquare, LogOut, HelpCircle, UserCircle } from 'lucide-react'
 
 const NAV = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -8,6 +8,14 @@ const NAV = [
   { to: '/life-events', label: 'Life Events', icon: CalendarHeart },
   { to: '/copilot', label: 'Ask ARIA', icon: MessageSquare },
   { to: '/help', label: 'Help', icon: HelpCircle },
+]
+
+const MOBILE_NAV = [
+  { to: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/goals', label: 'Goals', icon: Target },
+  { to: '/life-events', label: 'Life Events', icon: CalendarHeart },
+  { to: '/copilot', label: 'Ask ARIA', icon: MessageSquare },
+  { to: '/profile', label: 'Profile', icon: UserCircle },
 ]
 
 export default function Layout({ children }) {
@@ -51,13 +59,19 @@ export default function Layout({ children }) {
         </nav>
 
         {/* Right: user + logout */}
-        <div className="flex items-center gap-3 flex-shrink-0">
-          <span className="hidden md:block text-xs text-gray-500 max-w-[120px] truncate">
-            {user?.display_name}
-          </span>
-          <div className="w-7 h-7 rounded-full bg-blue-100 text-[#1D6FDB] flex items-center justify-center text-xs font-bold flex-shrink-0">
-            {(user?.display_name || 'U')[0].toUpperCase()}
-          </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={() => navigate('/profile')}
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            title="Your profile"
+          >
+            <span className="hidden md:block text-xs text-gray-500 max-w-[120px] truncate">
+              {user?.display_name}
+            </span>
+            <div className="w-7 h-7 rounded-full bg-blue-100 text-[#1D6FDB] flex items-center justify-center text-xs font-bold flex-shrink-0">
+              {(user?.display_name || 'U')[0].toUpperCase()}
+            </div>
+          </button>
           <button
             onClick={handleLogout}
             className="p-1.5 text-gray-400 hover:text-gray-700 transition-colors"
@@ -76,7 +90,7 @@ export default function Layout({ children }) {
 
       {/* ── Mobile bottom nav ── */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-200 flex z-40">
-        {NAV.map(({ to, label, icon: Icon }) => (
+        {MOBILE_NAV.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
