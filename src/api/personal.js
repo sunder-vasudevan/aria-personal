@@ -16,6 +16,7 @@ export const register = (data) => api.post('/personal/auth/register', data).then
 export const login = (data) => api.post('/personal/auth/login', data).then(r => r.data)
 export const getMe = () => api.get('/personal/auth/me').then(r => r.data)
 export const updateProfile = (data) => api.put('/personal/auth/profile', data).then(r => r.data)
+export const linkAdvisor = (referral_code) => api.post('/personal/auth/link-advisor', { referral_code }).then(r => r.data)
 
 // ─── Portfolio ───────────────────────────────────────────────────────────────
 export const getPortfolio = () => api.get('/personal/portfolio').then(r => r.data)
