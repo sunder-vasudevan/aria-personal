@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { updateProfile, linkAdvisor } from '../api/personal'
-import { User, MapPin, Shield, Link2, CheckCircle, Phone, Mail } from 'lucide-react'
+import { User, MapPin, Shield, Link2, CheckCircle, Phone, Mail, Star } from 'lucide-react'
 
 const RISK_LABELS = {
   1: 'Very Conservative', 2: 'Very Conservative',
@@ -11,18 +11,47 @@ const RISK_LABELS = {
   9: 'Aggressive',        10: 'Aggressive',
 }
 
-function AdvisorCard({ advisorId }) {
-  // advisor_id is set — show linked state with referral info from /me response
-  // We rely on the advisor info coming from the link-advisor response stored in user context
-  // Since we only have advisor_id, we show a linked indicator
+function AdvisorCard({ advisor }) {
+  const initials = advisor?.display_name
+    ? advisor.display_name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
+    : 'A'
   return (
-    <div className="bg-teal-50 border border-teal-200 rounded-2xl p-4 flex items-center gap-3">
-      <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0">
-        <CheckCircle size={18} className="text-teal-600" />
+    <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm space-y-3">
+      <div className="flex items-center gap-3">
+        <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#1D6FDB] to-blue-700 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+          {initials}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-semibold text-gray-900 truncate">{advisor?.display_name || 'Your Advisor'}</div>
+          {(advisor?.city || advisor?.region) && (
+            <div className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+              <MapPin size={10} />
+              {[advisor.city, advisor.region].filter(Boolean).join(', ')}
+            </div>
+          )}
+        </div>
+        <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-teal-100 text-teal-700 text-xs font-semibold flex-shrink-0">
+          <CheckCircle size={11} /> Connected
+        </span>
       </div>
-      <div>
-        <div className="text-sm font-semibold text-teal-800">Advisor Connected</div>
-        <div className="text-xs text-teal-600 mt-0.5">Your advisor can see your portfolio and goals.</div>
+      <div className="grid grid-cols-2 gap-2 pt-1 border-t border-gray-100">
+        {advisor?.referral_code && (
+          <div>
+            <div className="text-xs text-gray-400">Advisor Code</div>
+            <div className="text-xs font-semibold text-gray-700 tracking-widest mt-0.5">{advisor.referral_code}</div>
+          </div>
+        )}
+        {advisor?.avg_rating != null && (
+          <div>
+            <div className="text-xs text-gray-400">Rating</div>
+            <div className="text-xs font-semibold text-gray-700 mt-0.5">
+              ★ {advisor.avg_rating.toFixed(1)} <span className="text-gray-400 font-normal">({advisor.rating_count})</span>
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="text-xs text-teal-600 flex items-center gap-1">
+        <CheckCircle size={11} /> Your advisor can see your portfolio and goals.
       </div>
     </div>
   )
@@ -215,7 +244,7 @@ export default function Profile() {
           <span className="text-sm font-semibold text-gray-800">Your Advisor</span>
         </div>
         {user.advisor_id
-          ? <AdvisorCard advisorId={user.advisor_id} />
+          ? <AdvisorCard advisor={user.advisor} />
           : <LinkAdvisorForm onLinked={refreshUser} />
         }
       </div>
