@@ -115,7 +115,8 @@ export default function Dashboard() {
 
   useEffect(() => {
     load()
-    if (user && user.advisor_id === undefined) refreshUser()
+    // Refresh user context on mount to pick up advisor_id from DB (covers null vs undefined)
+    refreshUser()
   }, [])
 
   const chartData = portfolio?.holdings?.map(h => ({
