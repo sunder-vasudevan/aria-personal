@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { useAuth } from '../auth/useAuth'
-import { getPortfolio, getGoals, fmt } from '../api/personal'
-import { TrendingUp, Target, Plus, ChevronRight, AlertCircle, Pencil } from 'lucide-react'
+import { getPortfolio, getGoals, getMyTrades, approveTrade, rejectTrade, fmt } from '../api/personal'
+import { TrendingUp, Target, Plus, ChevronRight, AlertCircle, Pencil, CheckCircle, X } from 'lucide-react'
 import PortfolioEditor from '../components/PortfolioEditor'
 
 const CATEGORY_COLORS = {
@@ -49,16 +49,46 @@ export default function Dashboard() {
   const { user } = useAuth()
   const [portfolio, setPortfolio] = useState(null)
   const [goals, setGoals] = useState([])
+  const [trades, setTrades] = useState([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
+  const [approvingTradeId, setApprovingTradeId] = useState(null)
+  const [tradeError, setTradeError] = useState('')
 
   function load() {
-    return Promise.all([getPortfolio(), getGoals()])
-      .then(([p, g]) => { setPortfolio(p); setGoals(g) })
+    return Promise.all([getPortfolio(), getGoals(), getMyTrades()])
+      .then(([p, g, t]) => { setPortfolio(p); setGoals(g); setTrades(t) })
+      .catch(err => { console.error(err); setTrades([]) })
       .finally(() => setLoading(false))
   }
 
   useEffect(() => { load() }, [])
+
+  const handleApproveTrade = async (trade) => {
+    try {
+      setApprovingTradeId(trade.id)
+      const updated = await approveTrade(trade.id, {})
+      setTrades(trades.map(t => t.id === trade.id ? updated : t))
+    } catch (err) {
+      setTradeError('Failed to approve trade')
+      console.error(err)
+    } finally {
+      setApprovingTradeId(null)
+    }
+  }
+
+  const handleRejectTrade = async (trade) => {
+    try {
+      setApprovingTradeId(trade.id)
+      const updated = await rejectTrade(trade.id, {})
+      setTrades(trades.map(t => t.id === trade.id ? updated : t))
+    } catch (err) {
+      setTradeError('Failed to reject trade')
+      console.error(err)
+    } finally {
+      setApprovingTradeId(null)
+    }
+  }
 
   const chartData = portfolio?.holdings?.map(h => ({
     name: h.fund_name,
@@ -109,6 +139,57 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* ── Pending Trades ── */}
+      {trades.length > 0 && (
+        <div className="bg-white rounded-2xl border border-amber-200 p-5 shadow-sm">
+          <div className="text-sm font-semibold text-gray-900 mb-3">
+            📊 You have {trades.filter(t => t.status === 'pending_approval').length} pending trade{trades.filter(t => t.status === 'pending_approval').length !== 1 ? 's' : ''}
+          </div>
+          <div className="space-y-2">
+            {trades.filter(t => t.status === 'pending_approval').map(trade => (
+              <div key={trade.id} className="bg-amber-50 border border-amber-100 rounded-lg p-3 flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-semibold text-amber-900 mb-0.5">
+                    {trade.action === 'buy' ? '🟢 Buy' : '🔴 Sell'} {trade.asset_code} ({trade.asset_type.replace(/_/g, ' ')})
+                  </div>
+                  <div className="text-xs text-amber-700">
+                    {trade.quantity} units · {fmt.inr(trade.estimated_value)}
+                  </div>
+                  {trade.asset_type === 'crypto' && (
+                    <div className="text-xs text-amber-600 mt-1">
+                      ⚠️ After approval, execute on your exchange (Coinbase/Kraken/MetaMask)
+                    </div>
+                  )}
+                  {trade.asset_type === 'mutual_fund' && (
+                    <div className="text-xs text-amber-600 mt-1">
+                      ⏳ Your advisor will process this in 1-2 business days
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-1.5 flex-shrink-0 ml-3">
+                  <button
+                    onClick={() => handleApproveTrade(trade)}
+                    disabled={approvingTradeId === trade.id}
+                    className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+                  >
+                    <CheckCircle size={12} />
+                    Approve
+                  </button>
+                  <button
+                    onClick={() => handleRejectTrade(trade)}
+                    disabled={approvingTradeId === trade.id}
+                    className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-white bg-gray-400 rounded-lg hover:bg-gray-500 disabled:opacity-50 transition-colors"
+                  >
+                    <X size={12} />
+                    Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Portfolio summary ── */}
       {portfolio ? (

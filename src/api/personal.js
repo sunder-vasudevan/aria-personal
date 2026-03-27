@@ -4,10 +4,17 @@ const BASE = import.meta.env.VITE_API_URL || 'https://aria-advisor.onrender.com'
 
 const api = axios.create({ baseURL: BASE })
 
-// Inject JWT on every request
+// Inject JWT on every request + extract user ID for trade operations
 api.interceptors.request.use(config => {
   const token = localStorage.getItem('aria_personal_token')
-  if (token) config.headers.Authorization = `Bearer ${token}`
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+    // Extract user ID from JWT (stored in localstorage if available)
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      if (payload.sub) config.headers['X-Personal-User-Id'] = payload.sub
+    } catch {}
+  }
   return config
 })
 
@@ -40,6 +47,12 @@ export const deleteLifeEvent = (id) => api.delete(`/personal/life-events/${id}`)
 // ─── Copilot ─────────────────────────────────────────────────────────────────
 export const sendMessage = (message, conversation_history = []) =>
   api.post('/personal/copilot', { message, conversation_history }).then(r => r.data)
+
+// ─── Trades (Phase 1A) ────────────────────────────────────────────────────────
+export const getMyTrades = () => api.get('/trades/personal/clients/me/trades').then(r => r.data)
+export const approveTrade = (tradeId, data) => api.put(`/trades/${tradeId}/approve`, data).then(r => r.data)
+export const rejectTrade = (tradeId, data) => api.put(`/trades/${tradeId}/reject`, data).then(r => r.data)
+export const updateCryptoTxHash = (tradeId, data) => api.put(`/trades/${tradeId}/tx-hash`, data).then(r => r.data)
 
 // ─── Formatters ──────────────────────────────────────────────────────────────
 export const fmt = {

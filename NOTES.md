@@ -34,6 +34,29 @@
 - Consumer-tone ARIA copilot ("your portfolio", not "the client")
 - Mobile-first layout with sidebar (desktop) + bottom nav (mobile)
 
+## Session 2 — 2026-03-20 (Design Review)
+
+### What happened
+- Reviewed reference mockup (Material Design / blue palette)
+- Built `aria-personal-preview.html` (V1) on Desktop — static HTML preview
+- Built `aria-personal-preview-v2.html` (Before/After comparison) on Desktop
+- V2 direction **approved** — changes to apply to both Personal and Advisor
+- V2 flagged as **too cluttered** — V3 pass needed (more whitespace, less density)
+- Created `PLAN.md` to track feature backlog and design decisions
+
+### Decisions made
+- Help → header icon button (beside notifications), removed from bottom nav
+- Mobile bottom nav: 4 tabs only (Dashboard, Goals, Life, Ask ARIA)
+- Hero: greeting + status pills replace redundant tagline
+- Goals cards: progress bars, not just % number
+- ARIA Says card: dark gradient to signal AI intelligence layer
+- Allocation bars: target marker + deviation pill
+- Light/dark toggle: added to backlog (PLAN.md)
+- Personal ↔ Advisor share design system — always confirm before cross-applying changes
+
+### Parked
+- V3 mockup (declutter pass) — next design session
+
 ## Next Session Agenda ← START HERE NEXT SESSION
 
 ### 1. FEAT-P001 — Portfolio Add/Edit UI
