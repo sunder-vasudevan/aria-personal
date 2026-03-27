@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { useAuth } from '../auth/useAuth'
 import { getPortfolio, getGoals, getMyTrades, approveTrade, rejectTrade, fmt } from '../api/personal'
@@ -47,6 +47,7 @@ function ProbabilityPill({ pct }) {
 
 export default function Dashboard() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [portfolio, setPortfolio] = useState(null)
   const [goals, setGoals] = useState([])
   const [trades, setTrades] = useState([])
@@ -54,6 +55,9 @@ export default function Dashboard() {
   const [editing, setEditing] = useState(false)
   const [approvingTradeId, setApprovingTradeId] = useState(null)
   const [tradeError, setTradeError] = useState('')
+  const [advisorBannerDismissed, setAdvisorBannerDismissed] = useState(() => {
+    return localStorage.getItem('aria_advisor_banner_dismissed') === '1'
+  })
 
   function load() {
     return Promise.all([getPortfolio(), getGoals(), getMyTrades()])
@@ -139,6 +143,34 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* ── No Advisor Banner ── */}
+      {!user?.advisor_id && !advisorBannerDismissed && (
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex items-start justify-between">
+          <div className="flex-1">
+            <div className="text-sm font-semibold text-blue-900">You're managing your portfolio independently.</div>
+            <div className="text-xs text-blue-700 mt-1">Want personalized guidance from an advisor?</div>
+          </div>
+          <div className="flex items-center gap-2 ml-3 flex-shrink-0">
+            <button
+              onClick={() => navigate('/profile')}
+              className="text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-100 hover:bg-blue-200 px-2.5 py-1.5 rounded-lg transition-colors"
+            >
+              Find Advisor
+            </button>
+            <button
+              onClick={() => {
+                setAdvisorBannerDismissed(true)
+                localStorage.setItem('aria_advisor_banner_dismissed', '1')
+              }}
+              className="text-blue-400 hover:text-blue-600 transition-colors"
+              title="Dismiss"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Pending Trades ── */}
       {trades.length > 0 && (

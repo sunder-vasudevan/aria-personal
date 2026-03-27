@@ -9,10 +9,10 @@ api.interceptors.request.use(config => {
   const token = localStorage.getItem('aria_personal_token')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
-    // Extract user ID from JWT (stored in localstorage if available)
+    // Extract user ID from JWT
     try {
       const payload = JSON.parse(atob(token.split('.')[1]))
-      if (payload.sub) config.headers['X-Personal-User-Id'] = payload.sub
+      if (payload.user_id) config.headers['X-Personal-User-Id'] = payload.user_id
     } catch {}
   }
   return config
