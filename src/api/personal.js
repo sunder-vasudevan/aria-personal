@@ -54,6 +54,16 @@ export const approveTrade = (tradeId, data) => api.put(`/trades/${tradeId}/appro
 export const rejectTrade = (tradeId, data) => api.put(`/trades/${tradeId}/reject`, data).then(r => r.data)
 export const updateCryptoTxHash = (tradeId, data) => api.put(`/trades/${tradeId}/tx-hash`, data).then(r => r.data)
 
+// ─── Notifications (FEAT-1004) ────────────────────────────────────────────────
+export const getClientNotifications = (limit = 20) =>
+  api.get(`/notifications/personal/me?limit=${limit}`).then(r => r.data)
+
+export const markNotificationRead = (notificationId) =>
+  api.put(`/notifications/${notificationId}/read`).then(r => r.data)
+
+export const deleteNotification = (notificationId) =>
+  api.delete(`/notifications/${notificationId}`).then(r => r.data)
+
 // ─── Formatters ──────────────────────────────────────────────────────────────
 export const fmt = {
   inr: (v) => {
