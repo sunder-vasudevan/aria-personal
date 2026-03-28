@@ -58,6 +58,27 @@ Expand the **What-if Scenario** panel on the Goals page.
 - Conversation history maintained within the session
 - Suggested questions to get started
 
+### Trade Approval (Advisor-Initiated)
+When linked to an advisor, you'll see trade approval requests on the dashboard.
+
+**Status Flow:**
+1. **📝 Draft** — Advisor is preparing the trade (hidden from you)
+2. **⏳ Pending Approval** — Advisor submitted for your approval
+   - Shows in **Trades** section on dashboard
+   - You'll see a notification banner
+   - Review the trade: asset, quantity, estimated value
+   - Click **Approve** or **Reject**
+3. **✅ Approved** — You approved, advisor will process
+   - For mutual funds: advisor processes in 1-2 business days
+   - For crypto: after approval, you execute on your exchange (Coinbase/Kraken/MetaMask)
+4. **🔒 Settled** — Trade executed and completed
+5. **❌ Rejected** — You rejected; advisor will follow up
+
+**Notifications:**
+- Desktop: notification banner appears when new trade is submitted
+- Mobile: same banner, swipe to dismiss
+- No email notifications yet (coming in future update)
+
 ---
 
 ## Account
@@ -82,6 +103,13 @@ Click **Sign Out** in the sidebar (desktop) or the logout icon in the top bar (m
 ---
 
 ## Version History
+
+### v0.2.0 (2026-03-28)
+- **Trade Approval Workflow:** Advisor can submit trades for client approval
+  - Dashboard shows all trade statuses: Draft, Pending Approval, Approved, Settled, Rejected
+  - Notifications banner alerts when new trade is submitted
+  - Approve/Reject buttons for pending trades
+  - Support for mutual funds + crypto (crypto requires manual exchange execution)
 
 ### v0.1.0 (2026-03-18)
 - Initial build: Register/Login, Dashboard, Goals, Life Events, Ask ARIA
