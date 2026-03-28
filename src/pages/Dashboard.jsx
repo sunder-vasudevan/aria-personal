@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { useAuth } from '../auth/useAuth'
-import { getPortfolio, getGoals, getMyTrades, approveTrade, rejectTrade, fmt } from '../api/personal'
+import { getPortfolio, getGoals, getMyTrades, approveTrade, rejectTrade, getClientNotifications, fmt } from '../api/personal'
 import { TrendingUp, Target, Plus, ChevronRight, AlertCircle, Pencil, CheckCircle, X } from 'lucide-react'
 import PortfolioEditor from '../components/PortfolioEditor'
 
@@ -60,8 +60,8 @@ export default function Dashboard() {
   })
 
   function load() {
-    return Promise.all([getPortfolio(), getGoals(), getMyTrades()])
-      .then(([p, g, t]) => { setPortfolio(p); setGoals(g); setTrades(t) })
+    return Promise.all([getPortfolio(), getGoals(), getMyTrades(), getClientNotifications()])
+      .then(([p, g, t, n]) => { setPortfolio(p); setGoals(g); setTrades(t) })
       .catch(err => { console.error(err); setTrades([]) })
       .finally(() => setLoading(false))
   }
