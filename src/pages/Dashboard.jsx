@@ -51,6 +51,7 @@ export default function Dashboard() {
   const [portfolio, setPortfolio] = useState(null)
   const [goals, setGoals] = useState([])
   const [trades, setTrades] = useState([])
+  const [notifications, setNotifications] = useState([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
   const [approvingTradeId, setApprovingTradeId] = useState(null)
@@ -61,8 +62,8 @@ export default function Dashboard() {
 
   function load() {
     return Promise.all([getPortfolio(), getGoals(), getMyTrades(), getClientNotifications()])
-      .then(([p, g, t, n]) => { setPortfolio(p); setGoals(g); setTrades(t) })
-      .catch(err => { console.error(err); setTrades([]) })
+      .then(([p, g, t, n]) => { setPortfolio(p); setGoals(g); setTrades(t); setNotifications(n?.notifications || []) })
+      .catch(err => { console.error(err); setTrades([]); setNotifications([]) })
       .finally(() => setLoading(false))
   }
 
@@ -172,53 +173,93 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ── Pending Trades ── */}
-      {trades.length > 0 && (
-        <div className="bg-white rounded-2xl border border-amber-200 p-5 shadow-sm">
-          <div className="text-sm font-semibold text-gray-900 mb-3">
-            📊 You have {trades.filter(t => t.status === 'pending_approval').length} pending trade{trades.filter(t => t.status === 'pending_approval').length !== 1 ? 's' : ''}
-          </div>
+      {/* ── Notifications Alert ── */}
+      {notifications.length > 0 && (
+        <div className="bg-white rounded-2xl border border-blue-200 p-4 shadow-sm">
           <div className="space-y-2">
-            {trades.filter(t => t.status === 'pending_approval').map(trade => (
-              <div key={trade.id} className="bg-amber-50 border border-amber-100 rounded-lg p-3 flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-semibold text-amber-900 mb-0.5">
-                    {trade.action === 'buy' ? '🟢 Buy' : '🔴 Sell'} {trade.asset_code} ({trade.asset_type.replace(/_/g, ' ')})
-                  </div>
-                  <div className="text-xs text-amber-700">
-                    {trade.quantity} units · {fmt.inr(trade.estimated_value)}
-                  </div>
-                  {trade.asset_type === 'crypto' && (
-                    <div className="text-xs text-amber-600 mt-1">
-                      ⚠️ After approval, execute on your exchange (Coinbase/Kraken/MetaMask)
-                    </div>
-                  )}
-                  {trade.asset_type === 'mutual_fund' && (
-                    <div className="text-xs text-amber-600 mt-1">
-                      ⏳ Your advisor will process this in 1-2 business days
-                    </div>
-                  )}
+            {notifications.map(notif => (
+              <div key={notif.id} className="flex items-start gap-3 text-sm">
+                <div className="text-base flex-shrink-0">
+                  {notif.notification_type === 'trade_submitted' ? '📊' : '✅'}
                 </div>
-                <div className="flex gap-1.5 flex-shrink-0 ml-3">
-                  <button
-                    onClick={() => handleApproveTrade(trade)}
-                    disabled={approvingTradeId === trade.id}
-                    className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
-                  >
-                    <CheckCircle size={12} />
-                    Approve
-                  </button>
-                  <button
-                    onClick={() => handleRejectTrade(trade)}
-                    disabled={approvingTradeId === trade.id}
-                    className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-white bg-gray-400 rounded-lg hover:bg-gray-500 disabled:opacity-50 transition-colors"
-                  >
-                    <X size={12} />
-                    Reject
-                  </button>
+                <div className="flex-1 min-w-0">
+                  <div className={notif.read ? 'text-gray-600' : 'font-semibold text-blue-900'}>
+                    {notif.message}
+                  </div>
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── All Trades (Draft, Pending, Approved) ── */}
+      {trades.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+          <div className="text-sm font-semibold text-gray-900 mb-3">
+            📊 Trades · {trades.filter(t => t.status === 'pending_approval').length} pending, {trades.filter(t => t.status === 'approved' || t.status === 'settled').length} approved
+          </div>
+          <div className="space-y-2">
+            {trades.map(trade => {
+              const statusColor = {
+                'draft': 'bg-gray-50 border-gray-100 text-gray-900',
+                'pending_approval': 'bg-amber-50 border-amber-100 text-amber-900',
+                'approved': 'bg-green-50 border-green-100 text-green-900',
+                'settled': 'bg-blue-50 border-blue-100 text-blue-900',
+                'rejected': 'bg-red-50 border-red-100 text-red-900',
+              }[trade.status] || 'bg-gray-50 border-gray-100 text-gray-900'
+
+              const statusLabel = {
+                'draft': '📝 Draft',
+                'pending_approval': '⏳ Pending Approval',
+                'approved': '✅ Approved',
+                'settled': '🔒 Settled',
+                'rejected': '❌ Rejected',
+              }[trade.status] || trade.status
+
+              return (
+                <div key={trade.id} className={`border rounded-lg p-3 flex items-start justify-between ${statusColor}`}>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-semibold mb-0.5">
+                      {statusLabel} · {trade.action === 'buy' ? '🟢 Buy' : '🔴 Sell'} {trade.asset_code} ({trade.asset_type.replace(/_/g, ' ')})
+                    </div>
+                    <div className="text-xs opacity-75">
+                      {trade.quantity} units · {fmt.inr(trade.estimated_value)}
+                    </div>
+                    {trade.asset_type === 'crypto' && trade.status === 'approved' && (
+                      <div className="text-xs mt-1 opacity-75">
+                        ⚠️ Execute on your exchange (Coinbase/Kraken/MetaMask)
+                      </div>
+                    )}
+                    {trade.asset_type === 'mutual_fund' && trade.status === 'pending_approval' && (
+                      <div className="text-xs mt-1 opacity-75">
+                        ⏳ Your advisor will process in 1-2 business days after approval
+                      </div>
+                    )}
+                  </div>
+                  {trade.status === 'pending_approval' && (
+                    <div className="flex gap-1.5 flex-shrink-0 ml-3">
+                      <button
+                        onClick={() => handleApproveTrade(trade)}
+                        disabled={approvingTradeId === trade.id}
+                        className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+                      >
+                        <CheckCircle size={12} />
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => handleRejectTrade(trade)}
+                        disabled={approvingTradeId === trade.id}
+                        className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-white bg-gray-400 rounded-lg hover:bg-gray-500 disabled:opacity-50 transition-colors"
+                      >
+                        <X size={12} />
+                        Reject
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
