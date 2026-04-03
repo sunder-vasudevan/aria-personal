@@ -263,59 +263,42 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ── All Trades (Draft, Pending, Approved) ── */}
-      {(trades.length > 0 || user?.advisor_id) && (
-        <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-sm font-semibold text-gray-900">
-              📊 Trades · {trades.filter(t => t.status === 'pending_approval').length} pending, {trades.filter(t => t.status === 'settled').length} settled
-            </div>
-            {user?.advisor_id && (
-              <button
-                onClick={() => { setTradeModal(true); setTradeFormError('') }}
-                className="flex items-center gap-1 text-xs font-semibold text-white bg-[#1D6FDB] px-2.5 py-1.5 rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <Plus size={12} /> New Trade
-              </button>
-            )}
+      {/* ── All Trades ── */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-sm font-semibold text-gray-900">
+            📊 Trades · {trades.filter(t => t.status === 'pending_approval').length} pending, {trades.filter(t => t.status === 'settled').length} settled
           </div>
+          <button
+            onClick={() => { setTradeModal(true); setTradeFormError('') }}
+            className="flex items-center gap-1 text-xs font-semibold text-white bg-[#1D6FDB] px-2.5 py-1.5 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Plus size={12} /> New Trade
+          </button>
+        </div>
+        {trades.length === 0 ? (
+          <div className="text-xs text-gray-400 text-center py-4">No trades yet. Use New Trade to get started.</div>
+        ) : (
           <div className="space-y-2">
             {trades.map(trade => {
               const statusColor = {
-                'draft': 'bg-gray-50 border-gray-100 text-gray-900',
-                'pending_approval': 'bg-amber-50 border-amber-100 text-amber-900',
-                'approved': 'bg-green-50 border-green-100 text-green-900',
-                'settled': 'bg-blue-50 border-blue-100 text-blue-900',
-                'rejected': 'bg-red-50 border-red-100 text-red-900',
+                draft: 'bg-gray-50 border-gray-100 text-gray-900',
+                pending_approval: 'bg-amber-50 border-amber-100 text-amber-900',
+                approved: 'bg-green-50 border-green-100 text-green-900',
+                settled: 'bg-blue-50 border-blue-100 text-blue-900',
+                rejected: 'bg-red-50 border-red-100 text-red-900',
               }[trade.status] || 'bg-gray-50 border-gray-100 text-gray-900'
-
               const statusLabel = {
-                'draft': '📝 Draft',
-                'pending_approval': '⏳ Pending Approval',
-                'approved': '✅ Approved',
-                'settled': '🔒 Settled',
-                'rejected': '❌ Rejected',
+                draft: '📝 Draft', pending_approval: '⏳ Pending', approved: '✅ Approved',
+                settled: '🔒 Settled', rejected: '❌ Rejected',
               }[trade.status] || trade.status
-
               return (
                 <div key={trade.id} className={`border rounded-lg p-3 flex items-start justify-between ${statusColor}`}>
                   <div className="flex-1 min-w-0">
                     <div className="text-xs font-semibold mb-0.5">
                       {statusLabel} · {trade.action === 'buy' ? '🟢 Buy' : '🔴 Sell'} {trade.asset_code} ({trade.asset_type.replace(/_/g, ' ')})
                     </div>
-                    <div className="text-xs opacity-75">
-                      {trade.quantity} units · {fmt.inr(trade.estimated_value)}
-                    </div>
-                    {trade.asset_type === 'crypto' && trade.status === 'approved' && (
-                      <div className="text-xs mt-1 opacity-75">
-                        ⚠️ Execute on your exchange (Coinbase/Kraken/MetaMask)
-                      </div>
-                    )}
-                    {trade.asset_type === 'mutual_fund' && trade.status === 'pending_approval' && (
-                      <div className="text-xs mt-1 opacity-75">
-                        ⏳ Your advisor will process in 1-2 business days after approval
-                      </div>
-                    )}
+                    <div className="text-xs opacity-75">{trade.quantity} units · {fmt.inr(trade.estimated_value)}</div>
                   </div>
                   {trade.status === 'pending_approval' && (
                     <div className="flex flex-col items-end gap-1.5 flex-shrink-0 ml-3">
@@ -333,20 +316,16 @@ export default function Dashboard() {
                           disabled={approvingTradeId === trade.id}
                           className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-white bg-gray-400 rounded-lg hover:bg-gray-500 disabled:opacity-50 transition-colors"
                         >
-                          <X size={12} />
-                          Reject
+                          <X size={12} /> Reject
                         </button>
                       </div>
                       {balanceCheck && balanceCheck.tradeId === trade.id && !balanceCheck.sufficient && (
                         <div className="text-xs text-red-600 font-medium text-right max-w-[180px]">
                           ⚠️ Insufficient {trade.action === 'buy' ? 'cash' : 'units'}.
                           {trade.action === 'buy'
-                            ? ` Available ₹${fmt.inr(balanceCheck.available)}, need ₹${fmt.inr(balanceCheck.required)}.`
+                            ? ` Available ${fmt.inr(balanceCheck.available)}, need ${fmt.inr(balanceCheck.required)}.`
                             : ` Have ${balanceCheck.available} units, need ${balanceCheck.required}.`}
-                          <button
-                            onClick={() => setBalanceCheck(null)}
-                            className="ml-1 underline text-red-500"
-                          >Dismiss</button>
+                          <button onClick={() => setBalanceCheck(null)} className="ml-1 underline text-red-500">Dismiss</button>
                         </div>
                       )}
                     </div>
@@ -355,8 +334,8 @@ export default function Dashboard() {
               )
             })}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* ── Portfolio summary ── */}
       {portfolio ? (
@@ -575,7 +554,9 @@ export default function Dashboard() {
                 {tradeSubmitting ? 'Submitting…' : 'Submit Trade'}
               </button>
               <p className="text-xs text-gray-400 text-center">
-                Trade is sent to your advisor and settled immediately.
+                {user?.advisor_id
+                  ? 'Trade settles immediately. Your advisor is notified.'
+                  : 'Trade settles immediately. Link an advisor to share future trades.'}
               </p>
             </div>
           </div>
