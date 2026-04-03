@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { useAuth } from '../auth/useAuth'
-import { getPortfolio, getGoals, getMyTrades, approveTrade, rejectTrade, getClientNotifications, fmt } from '../api/personal'
-import { TrendingUp, Target, Plus, ChevronRight, AlertCircle, Pencil, CheckCircle, X } from 'lucide-react'
+import { getPortfolio, getGoals, getMyTrades, approveTrade, rejectTrade, getClientNotifications, submitMyTrade, checkBalance, fmt } from '../api/personal'
+import { TrendingUp, Target, Plus, ChevronRight, AlertCircle, Pencil, CheckCircle, X, ArrowUpDown } from 'lucide-react'
 import PortfolioEditor from '../components/PortfolioEditor'
 
 const CATEGORY_COLORS = {
@@ -60,6 +60,17 @@ export default function Dashboard() {
     return localStorage.getItem('aria_advisor_banner_dismissed') === '1'
   })
 
+  // New trade modal
+  const [tradeModal, setTradeModal] = useState(false)
+  const [tradeForm, setTradeForm] = useState({ asset_type: 'stock', action: 'buy', asset_code: '', quantity: '', estimated_value: '', client_note: '' })
+  const [tradeSubmitting, setTradeSubmitting] = useState(false)
+  const [tradeFormError, setTradeFormError] = useState('')
+  const [tradeSuccess, setTradeSuccess] = useState('')
+
+  // Balance check state (for approve)
+  const [balanceCheck, setBalanceCheck] = useState(null)   // { sufficient, available, required, shortfall }
+  const [checkingBalance, setCheckingBalance] = useState(null)  // trade id being checked
+
   function load() {
     return Promise.all([getPortfolio(), getGoals(), getMyTrades(), getClientNotifications()])
       .then(([p, g, t, n]) => { setPortfolio(p); setGoals(g); setTrades(t); setNotifications(n?.notifications || []) })
@@ -92,6 +103,57 @@ export default function Dashboard() {
       console.error(err)
     } finally {
       setApprovingTradeId(null)
+    }
+  }
+
+  const handleCheckAndApprove = async (trade) => {
+    try {
+      setCheckingBalance(trade.id)
+      setBalanceCheck(null)
+      setTradeError('')
+      const result = await checkBalance({
+        action: trade.action,
+        asset_code: trade.asset_code,
+        quantity: trade.quantity,
+        estimated_value: trade.estimated_value,
+      })
+      setBalanceCheck({ ...result, tradeId: trade.id })
+      if (result.sufficient) {
+        // Auto-proceed to approve
+        setApprovingTradeId(trade.id)
+        const updated = await approveTrade(trade.id, {})
+        setTrades(trades.map(t => t.id === trade.id ? updated : t))
+        setBalanceCheck(null)
+      }
+    } catch (err) {
+      const msg = err?.response?.data?.detail || 'Balance check failed'
+      setTradeError(msg)
+    } finally {
+      setCheckingBalance(null)
+      setApprovingTradeId(null)
+    }
+  }
+
+  const handleSubmitTrade = async () => {
+    setTradeFormError('')
+    if (!tradeForm.asset_code.trim()) return setTradeFormError('Asset code required')
+    if (!tradeForm.quantity || Number(tradeForm.quantity) <= 0) return setTradeFormError('Quantity must be > 0')
+    if (!tradeForm.estimated_value || Number(tradeForm.estimated_value) <= 0) return setTradeFormError('Value must be > 0')
+    try {
+      setTradeSubmitting(true)
+      await submitMyTrade({
+        ...tradeForm,
+        quantity: Number(tradeForm.quantity),
+        estimated_value: Number(tradeForm.estimated_value),
+      })
+      setTradeSuccess('Trade submitted and settled.')
+      setTradeModal(false)
+      setTradeForm({ asset_type: 'stock', action: 'buy', asset_code: '', quantity: '', estimated_value: '', client_note: '' })
+      load()
+    } catch (err) {
+      setTradeFormError(err?.response?.data?.detail || 'Trade failed')
+    } finally {
+      setTradeSubmitting(false)
     }
   }
 
@@ -193,11 +255,29 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* ── Success banner ── */}
+      {tradeSuccess && (
+        <div className="bg-green-50 border border-green-200 rounded-2xl p-3 flex items-center justify-between">
+          <span className="text-sm text-green-800 font-medium">✅ {tradeSuccess}</span>
+          <button onClick={() => setTradeSuccess('')} className="text-green-400 hover:text-green-600"><X size={15} /></button>
+        </div>
+      )}
+
       {/* ── All Trades (Draft, Pending, Approved) ── */}
-      {trades.length > 0 && (
+      {(trades.length > 0 || user?.advisor_id) && (
         <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
-          <div className="text-sm font-semibold text-gray-900 mb-3">
-            📊 Trades · {trades.filter(t => t.status === 'pending_approval').length} pending, {trades.filter(t => t.status === 'approved' || t.status === 'settled').length} approved
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-sm font-semibold text-gray-900">
+              📊 Trades · {trades.filter(t => t.status === 'pending_approval').length} pending, {trades.filter(t => t.status === 'settled').length} settled
+            </div>
+            {user?.advisor_id && (
+              <button
+                onClick={() => { setTradeModal(true); setTradeFormError('') }}
+                className="flex items-center gap-1 text-xs font-semibold text-white bg-[#1D6FDB] px-2.5 py-1.5 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Plus size={12} /> New Trade
+              </button>
+            )}
           </div>
           <div className="space-y-2">
             {trades.map(trade => {
@@ -238,23 +318,37 @@ export default function Dashboard() {
                     )}
                   </div>
                   {trade.status === 'pending_approval' && (
-                    <div className="flex gap-1.5 flex-shrink-0 ml-3">
-                      <button
-                        onClick={() => handleApproveTrade(trade)}
-                        disabled={approvingTradeId === trade.id}
-                        className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
-                      >
-                        <CheckCircle size={12} />
-                        Approve
-                      </button>
-                      <button
-                        onClick={() => handleRejectTrade(trade)}
-                        disabled={approvingTradeId === trade.id}
-                        className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-white bg-gray-400 rounded-lg hover:bg-gray-500 disabled:opacity-50 transition-colors"
-                      >
-                        <X size={12} />
-                        Reject
-                      </button>
+                    <div className="flex flex-col items-end gap-1.5 flex-shrink-0 ml-3">
+                      <div className="flex gap-1.5">
+                        <button
+                          onClick={() => handleCheckAndApprove(trade)}
+                          disabled={approvingTradeId === trade.id || checkingBalance === trade.id}
+                          className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+                        >
+                          <CheckCircle size={12} />
+                          {checkingBalance === trade.id ? 'Checking…' : 'Check & Approve'}
+                        </button>
+                        <button
+                          onClick={() => handleRejectTrade(trade)}
+                          disabled={approvingTradeId === trade.id}
+                          className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-white bg-gray-400 rounded-lg hover:bg-gray-500 disabled:opacity-50 transition-colors"
+                        >
+                          <X size={12} />
+                          Reject
+                        </button>
+                      </div>
+                      {balanceCheck && balanceCheck.tradeId === trade.id && !balanceCheck.sufficient && (
+                        <div className="text-xs text-red-600 font-medium text-right max-w-[180px]">
+                          ⚠️ Insufficient {trade.action === 'buy' ? 'cash' : 'units'}.
+                          {trade.action === 'buy'
+                            ? ` Available ₹${fmt.inr(balanceCheck.available)}, need ₹${fmt.inr(balanceCheck.required)}.`
+                            : ` Have ${balanceCheck.available} units, need ${balanceCheck.required}.`}
+                          <button
+                            onClick={() => setBalanceCheck(null)}
+                            className="ml-1 underline text-red-500"
+                          >Dismiss</button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -271,6 +365,9 @@ export default function Dashboard() {
             <div>
               <div className="text-xs font-medium text-gray-400 uppercase tracking-wider">Total Portfolio</div>
               <div className="text-3xl font-bold text-gray-900 tabular-nums mt-0.5">{fmt.inr(portfolio.total_value)}</div>
+              {portfolio.cash_balance != null && (
+                <div className="text-xs text-gray-500 mt-0.5">💵 Cash available: <span className="font-semibold text-gray-700">{fmt.inr(portfolio.cash_balance)}</span></div>
+              )}
             </div>
             <div className="flex items-center gap-3">
               <button onClick={() => setEditing(true)} className="flex items-center gap-1 text-xs font-medium text-[#1D6FDB] hover:underline">
@@ -386,6 +483,102 @@ export default function Dashboard() {
           >
             <Plus size={14} /> Add a Goal
           </Link>
+        </div>
+      )}
+
+      {/* ── New Trade Modal ── */}
+      {tradeModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <ArrowUpDown size={16} className="text-[#1D6FDB]" />
+                <span className="text-base font-bold text-gray-900">New Trade</span>
+              </div>
+              <button onClick={() => setTradeModal(false)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+            </div>
+
+            <div className="space-y-3">
+              {/* Action */}
+              <div className="grid grid-cols-2 gap-2">
+                {['buy', 'sell'].map(a => (
+                  <button
+                    key={a}
+                    onClick={() => setTradeForm(f => ({ ...f, action: a }))}
+                    className={`py-2 rounded-xl text-sm font-semibold border-2 transition-colors ${
+                      tradeForm.action === a
+                        ? a === 'buy' ? 'border-green-500 bg-green-50 text-green-700' : 'border-red-400 bg-red-50 text-red-700'
+                        : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                    }`}
+                  >
+                    {a === 'buy' ? '🟢 Buy' : '🔴 Sell'}
+                  </button>
+                ))}
+              </div>
+
+              {/* Asset type */}
+              <select
+                value={tradeForm.asset_type}
+                onChange={e => setTradeForm(f => ({ ...f, asset_type: e.target.value }))}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              >
+                {['stock','mutual_fund','crypto','bond','commodity','forex'].map(t => (
+                  <option key={t} value={t}>{t.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</option>
+                ))}
+              </select>
+
+              {/* Asset code */}
+              <input
+                type="text"
+                placeholder="Asset code (e.g. RELIANCE, BTC)"
+                value={tradeForm.asset_code}
+                onChange={e => setTradeForm(f => ({ ...f, asset_code: e.target.value.toUpperCase() }))}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+
+              {/* Quantity + Value */}
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="number"
+                  placeholder="Quantity (units)"
+                  value={tradeForm.quantity}
+                  onChange={e => setTradeForm(f => ({ ...f, quantity: e.target.value }))}
+                  className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+                <input
+                  type="number"
+                  placeholder="Value (₹)"
+                  value={tradeForm.estimated_value}
+                  onChange={e => setTradeForm(f => ({ ...f, estimated_value: e.target.value }))}
+                  className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+              </div>
+
+              {/* Note */}
+              <input
+                type="text"
+                placeholder="Note (optional)"
+                value={tradeForm.client_note}
+                onChange={e => setTradeForm(f => ({ ...f, client_note: e.target.value }))}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+
+              {tradeFormError && (
+                <div className="text-xs text-red-600 font-medium bg-red-50 rounded-lg px-3 py-2">⚠️ {tradeFormError}</div>
+              )}
+
+              <button
+                onClick={handleSubmitTrade}
+                disabled={tradeSubmitting}
+                className="w-full py-2.5 bg-[#1D6FDB] text-white text-sm font-semibold rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                {tradeSubmitting ? 'Submitting…' : 'Submit Trade'}
+              </button>
+              <p className="text-xs text-gray-400 text-center">
+                Trade is sent to your advisor and settled immediately.
+              </p>
+            </div>
+          </div>
         </div>
       )}
     </div>

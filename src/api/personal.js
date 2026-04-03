@@ -48,11 +48,13 @@ export const deleteLifeEvent = (id) => api.delete(`/personal/life-events/${id}`)
 export const sendMessage = (message, conversation_history = []) =>
   api.post('/personal/copilot', { message, conversation_history }).then(r => r.data)
 
-// ─── Trades (Phase 1A) ────────────────────────────────────────────────────────
+// ─── Trades (Phase 1A + Client-Initiated) ────────────────────────────────────
 export const getMyTrades = () => api.get('/trades/personal/clients/me/trades').then(r => r.data)
 export const approveTrade = (tradeId, data) => api.put(`/trades/${tradeId}/approve`, data).then(r => r.data)
 export const rejectTrade = (tradeId, data) => api.put(`/trades/${tradeId}/reject`, data).then(r => r.data)
 export const updateCryptoTxHash = (tradeId, data) => api.put(`/trades/${tradeId}/tx-hash`, data).then(r => r.data)
+export const submitMyTrade = (data) => api.post('/trades/personal/me/trades', data).then(r => r.data)
+export const checkBalance = (params) => api.get('/trades/personal/me/balance-check', { params }).then(r => r.data)
 
 // ─── Notifications (FEAT-1004) ────────────────────────────────────────────────
 export const getClientNotifications = (limit = 20) =>
