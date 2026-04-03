@@ -58,16 +58,34 @@ Expand the **What-if Scenario** panel on the Goals page.
 - Conversation history maintained within the session
 - Suggested questions to get started
 
-### Trade Approval (Advisor-Initiated)
-When linked to an advisor, you'll see trade approval requests on the dashboard.
+### Trades
+
+#### Initiate Your Own Trade
+Click **New Trade** on your dashboard (always visible — no advisor required).
+
+- Select **Buy** or **Sell**
+- Choose asset type (stock, mutual fund, crypto, bond, commodity, forex)
+- Enter asset code, quantity, and estimated value
+- Add an optional note
+- Click **Submit Trade** — trade settles immediately
+
+**Balance rules:**
+- **Buy:** Requires sufficient cash balance (shown as "💵 Cash available" on dashboard)
+- **Sell:** Requires sufficient units held for the specific asset
+
+If an advisor is linked, they'll receive an informational notification. If no advisor is linked, the trade processes silently.
+
+#### Advisor-Initiated Trades
+When linked to an advisor, you'll also see trade approval requests on your dashboard.
 
 **Status Flow:**
 1. **📝 Draft** — Advisor is preparing the trade (hidden from you)
-2. **⏳ Pending Approval** — Advisor submitted for your approval
+2. **⏳ Pending Approval** — Advisor submitted for your review
    - Shows in **Trades** section on dashboard
-   - You'll see a notification banner
    - Review the trade: asset, quantity, estimated value
-   - Click **Approve** or **Reject**
+   - Click **Check & Approve** — balance check runs first
+   - If balance is insufficient, a ⚠️ warning shows the shortfall amount
+   - Adjust your trade or add funds, then re-attempt
 3. **✅ Approved** — You approved, advisor will process
    - For mutual funds: advisor processes in 1-2 business days
    - For crypto: after approval, you execute on your exchange (Coinbase/Kraken/MetaMask)
@@ -76,7 +94,7 @@ When linked to an advisor, you'll see trade approval requests on the dashboard.
 
 **Notifications:**
 - Desktop: notification banner appears when new trade is submitted
-- Mobile: same banner, swipe to dismiss
+- Mobile: same banner
 - No email notifications yet (coming in future update)
 
 ---
@@ -103,6 +121,17 @@ Click **Sign Out** in the sidebar (desktop) or the logout icon in the top bar (m
 ---
 
 ## Version History
+
+### v0.3.0 (2026-04-03)
+- **Client-Initiated Trades:** New Trade button always visible — initiate your own trades without an advisor
+  - Buy/Sell toggle, asset type + code, quantity + value
+  - Trades settle immediately
+  - Advisor notified (if linked) as information — no approval loop
+- **Balance Validation:** Check & Approve now runs a balance check before settling advisor trades
+  - Buy: checks cash balance
+  - Sell: checks units held for the specific asset
+  - Inline ⚠️ shortfall warning with exact amount needed
+- **Cash Balance Display:** "💵 Cash available: ₹X" shown under portfolio total on dashboard
 
 ### v0.2.0 (2026-03-28)
 - **Trade Approval Workflow:** Advisor can submit trades for client approval
