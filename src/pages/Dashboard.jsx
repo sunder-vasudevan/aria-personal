@@ -591,6 +591,10 @@ function TradeModal({ portfolio, onClose, onSubmit, tradeForm, setTradeForm, tra
   const quantity = Number(tradeForm.quantity) || 0
   const estimatedValue = Number(tradeForm.estimated_value) || 0
 
+  // Minimum quantity by asset type
+  const MIN_QTY = selected?.type === 'crypto' ? 0.0001 : selected?.type === 'stock' ? 1 : 0.0001
+  const belowMinQty = quantity > 0 && quantity < MIN_QTY
+
   // Buy validations
   const buyInsufficient = tradeForm.action === 'buy' && estimatedValue > 0 && estimatedValue > cashBalance
   const buyShortfall = Math.max(0, estimatedValue - cashBalance)
@@ -599,7 +603,7 @@ function TradeModal({ portfolio, onClose, onSubmit, tradeForm, setTradeForm, tra
   const sellExceedsHolding = tradeForm.action === 'sell' && quantity > 0 && quantity > unitsHeld
   const sellExceedsValue = tradeForm.action === 'sell' && estimatedValue > 0 && estimatedValue > holdingValue
 
-  const canSubmit = selected && quantity > 0 && estimatedValue > 0 && !buyInsufficient && !sellExceedsHolding && !tradeSubmitting
+  const canSubmit = selected && quantity > 0 && estimatedValue > 0 && !belowMinQty && !buyInsufficient && !sellExceedsHolding && !tradeSubmitting
 
   const handleSelectInstrument = (ins) => {
     setTradeForm(f => ({
@@ -788,6 +792,11 @@ function TradeModal({ portfolio, onClose, onSubmit, tradeForm, setTradeForm, tra
               )}
 
               {/* Sell over-holding warning */}
+              {belowMinQty && (
+                <p className="text-xs text-red-600 font-medium bg-red-50 rounded-lg px-3 py-2 mt-2">
+                  ⚠ Minimum is {MIN_QTY} {selected?.type === 'stock' ? 'unit (whole shares only)' : 'units'} for {selected?.type}.
+                </p>
+              )}
               {tradeForm.action === 'sell' && sellExceedsHolding && (
                 <p className="text-xs text-red-600 font-medium bg-red-50 rounded-lg px-3 py-2 mt-2">
                   ⚠ You only hold {unitsHeld.toFixed(4)} units. Reduce quantity.
