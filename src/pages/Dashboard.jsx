@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { useAuth } from '../auth/useAuth'
 import { getPortfolio, getGoals, getMyTrades, approveTrade, rejectTrade, getClientNotifications, submitMyTrade, checkBalance, fmt } from '../api/personal'
-import { TrendingUp, Target, Plus, ChevronRight, AlertCircle, Pencil, CheckCircle, X, ArrowUpDown } from 'lucide-react'
+import { TrendingUp, Target, Plus, ChevronRight, AlertCircle, Pencil, CheckCircle, X, ArrowUpDown, Eye, EyeOff } from 'lucide-react'
 import PortfolioEditor from '../components/PortfolioEditor'
 
 const CATEGORY_COLORS = {
@@ -56,6 +56,7 @@ export default function Dashboard() {
   const [editing, setEditing] = useState(false)
   const [approvingTradeId, setApprovingTradeId] = useState(null)
   const [tradeError, setTradeError] = useState('')
+  const [showBalances, setShowBalances] = useState(false)
   const [advisorBannerDismissed, setAdvisorBannerDismissed] = useState(() => {
     return localStorage.getItem('aria_advisor_banner_dismissed') === '1'
   })
@@ -157,6 +158,15 @@ export default function Dashboard() {
     }
   }
 
+  const EQUITY_CATEGORIES = new Set(['Large Cap', 'Flexi Cap', 'Mid Cap', 'Small Cap', 'Multi Cap', 'Equity'])
+  const equityValue = portfolio?.holdings
+    ?.filter(h => EQUITY_CATEGORIES.has(h.fund_category))
+    .reduce((sum, h) => sum + (h.current_value || 0), 0) ?? 0
+  const cryptoValue = trades
+    .filter(t => t.asset_type === 'crypto' && t.status === 'settled')
+    .reduce((sum, t) => sum + (t.action === 'buy' ? (t.estimated_value || 0) : -(t.estimated_value || 0)), 0)
+  const cashValue = portfolio?.cash_balance ?? 0
+
   const chartData = portfolio?.holdings?.map(h => ({
     name: h.fund_name,
     value: h.current_value,
@@ -234,6 +244,35 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* ── Holdings Summary ── */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Your Holdings</span>
+            <button
+              onClick={() => setShowBalances(v => !v)}
+              className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              {showBalances ? <EyeOff size={13} /> : <Eye size={13} />}
+              {showBalances ? 'Hide' : 'Show'}
+            </button>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: 'Cash', icon: '💵', value: cashValue, color: 'text-amber-600' },
+              { label: 'Stocks', icon: '📈', value: equityValue, color: 'text-blue-600' },
+              { label: 'Crypto', icon: '₿', value: cryptoValue, color: 'text-purple-600' },
+            ].map(({ label, icon, value, color }) => (
+              <div key={label} className="bg-gray-50 rounded-xl p-3 text-center">
+                <div className="text-lg mb-1">{icon}</div>
+                <div className="text-xs text-gray-400 mb-1">{label}</div>
+                <div className={`text-sm font-bold tabular-nums ${color}`}>
+                  {showBalances ? (value === 0 ? '₹0' : fmt.inr(value)) : '••••••'}
+                </div>
+              </div>
+            ))}
+          </div>
+      </div>
 
       {/* ── Notifications Alert ── */}
       {notifications.length > 0 && (
@@ -467,101 +506,336 @@ export default function Dashboard() {
 
       {/* ── New Trade Modal ── */}
       {tradeModal && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <ArrowUpDown size={16} className="text-[#1D6FDB]" />
-                <span className="text-base font-bold text-gray-900">New Trade</span>
-              </div>
-              <button onClick={() => setTradeModal(false)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
-            </div>
+        <TradeModal
+          portfolio={portfolio}
+          onClose={() => { setTradeModal(false); setTradeFormError(''); setTradeSuccess('') }}
+          onSubmit={handleSubmitTrade}
+          tradeForm={tradeForm}
+          setTradeForm={setTradeForm}
+          tradeSubmitting={tradeSubmitting}
+          tradeFormError={tradeFormError}
+          advisorLinked={!!user?.advisor_id}
+        />
+      )}
+    </div>
+  )
+}
 
-            <div className="space-y-3">
-              {/* Action */}
-              <div className="grid grid-cols-2 gap-2">
-                {['buy', 'sell'].map(a => (
+// ── Instrument catalogue (from nifty_sample_dataset_with_isin.xlsx) ──────────
+const INSTRUMENTS = [
+  // Stocks — NIFTY 50
+  { type: 'stock', category: 'NIFTY 50',         name: 'Reliance Industries Ltd',           nav: 1540,   isin: null,           code: 'RELIANCE' },
+  { type: 'stock', category: 'NIFTY 50',         name: 'HDFC Bank Ltd',                     nav: 1420,   isin: null,           code: 'HDFCBANK' },
+  { type: 'stock', category: 'NIFTY 50',         name: 'Infosys Ltd',                       nav: 1350,   isin: null,           code: 'INFY' },
+  { type: 'stock', category: 'NIFTY 50',         name: 'TCS Ltd',                           nav: 3780,   isin: null,           code: 'TCS' },
+  { type: 'stock', category: 'NIFTY 50',         name: 'ICICI Bank Ltd',                    nav: 1080,   isin: null,           code: 'ICICIBANK' },
+  // Stocks — NIFTY Next 50
+  { type: 'stock', category: 'NIFTY Next 50',    name: 'Zomato Ltd',                        nav: 182,    isin: null,           code: 'ZOMATO' },
+  { type: 'stock', category: 'NIFTY Next 50',    name: 'DLF Ltd',                           nav: 780,    isin: null,           code: 'DLF' },
+  { type: 'stock', category: 'NIFTY Next 50',    name: 'Trent Ltd',                         nav: 4100,   isin: null,           code: 'TRENT' },
+  // Stocks — NIFTY 100
+  { type: 'stock', category: 'NIFTY 100',        name: 'Tata Power Ltd',                    nav: 420,    isin: null,           code: 'TATAPOWER' },
+  { type: 'stock', category: 'NIFTY 100',        name: 'Larsen & Toubro Ltd',               nav: 3650,   isin: null,           code: 'LT' },
+  // Equity MF — Index
+  { type: 'mutual_fund', category: 'NIFTY 50 Index',        name: 'HDFC Index Fund – NIFTY 50',          nav: 197.42, isin: 'INF179K01BB8', code: 'INF179K01BB8' },
+  { type: 'mutual_fund', category: 'NIFTY 50 Index',        name: 'UTI Nifty 50 Index Fund',             nav: 182.15, isin: 'INF789F1AUV1', code: 'INF789F1AUV1' },
+  { type: 'mutual_fund', category: 'NIFTY Next 50 Index',   name: 'ICICI Nifty Next 50 Index Fund',      nav: 36.18,  isin: 'INF109KC1KT4', code: 'INF109KC1KT4' },
+  { type: 'mutual_fund', category: 'NIFTY Next 50 Index',   name: 'Nippon India Nifty Next 50',          nav: 42.77,  isin: 'INF204KB14I2', code: 'INF204KB14I2' },
+  { type: 'mutual_fund', category: 'NIFTY Midcap 150 Index',name: 'Kotak Nifty Midcap 150 Index Fund',   nav: 21.77,  isin: 'INF174KA1P60', code: 'INF174KA1P60' },
+  { type: 'mutual_fund', category: 'NIFTY Midcap 150 Index',name: 'Motilal Oswal Nifty Midcap 150',      nav: 28.12,  isin: 'INF247L01BP3', code: 'INF247L01BP3' },
+  { type: 'mutual_fund', category: 'NIFTY Smallcap 250 Index',name:'Nippon India Nifty Smallcap 250',    nav: 18.92,  isin: 'INF204KB15I0', code: 'INF204KB15I0' },
+  { type: 'mutual_fund', category: 'NIFTY Smallcap 250 Index',name:'Motilal Oswal Nifty Smallcap 250',   nav: 19.44,  isin: 'INF247L01BQ1', code: 'INF247L01BQ1' },
+  { type: 'mutual_fund', category: 'NIFTY 100 Index',       name: 'ICICI Nifty 100 Index Fund',          nav: 32.55,  isin: 'INF109KC1KU2', code: 'INF109KC1KU2' },
+  { type: 'mutual_fund', category: 'NIFTY 100 Index',       name: 'HDFC Nifty 100 Index Fund',           nav: 28.91,  isin: 'INF179KC1KZ6', code: 'INF179KC1KZ6' },
+  // Debt MF
+  { type: 'mutual_fund', category: 'Gilt',               name: 'ICICI Prudential Gilt Fund',             nav: 78.14,  isin: 'INF109K01AN8', code: 'INF109K01AN8' },
+  { type: 'mutual_fund', category: 'Gilt',               name: 'HDFC Gilt Fund',                         nav: 62.77,  isin: 'INF179K01BP8', code: 'INF179K01BP8' },
+  { type: 'mutual_fund', category: 'Banking & PSU',      name: 'SBI Banking & PSU Debt Fund',            nav: 29.47,  isin: 'INF200K01WZ9', code: 'INF200K01WZ9' },
+  { type: 'mutual_fund', category: 'Banking & PSU',      name: 'Nippon India Banking & PSU',             nav: 32.11,  isin: 'INF204K01TN7', code: 'INF204K01TN7' },
+  { type: 'mutual_fund', category: 'Corporate Bond',     name: 'HDFC Corporate Bond Fund',               nav: 24.12,  isin: 'INF179K01DW3', code: 'INF179K01DW3' },
+  { type: 'mutual_fund', category: 'Corporate Bond',     name: 'ICICI Corporate Bond Fund',              nav: 32.88,  isin: 'INF109K01ZP4', code: 'INF109K01ZP4' },
+  { type: 'mutual_fund', category: 'Short Duration',     name: 'ICICI Short Term Fund',                  nav: 46.83,  isin: 'INF109K01MM2', code: 'INF109K01MM2' },
+  { type: 'mutual_fund', category: 'Short Duration',     name: 'HDFC Short Term Debt Fund',              nav: 41.55,  isin: 'INF179K01BQ6', code: 'INF179K01BQ6' },
+  { type: 'mutual_fund', category: 'Money Market',       name: 'Aditya Birla Money Manager Fund',        nav: 311.25, isin: 'INF209K01VY3', code: 'INF209K01VY3' },
+  { type: 'mutual_fund', category: 'Money Market',       name: 'Nippon India Money Market Fund',         nav: 4512.1, isin: 'INF204K01UQ4', code: 'INF204K01UQ4' },
+]
+
+const INPUT_CLS = 'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400'
+
+function TradeModal({ portfolio, onClose, onSubmit, tradeForm, setTradeForm, tradeSubmitting, tradeFormError, advisorLinked }) {
+  const [inputMode, setInputMode] = useState('amount') // 'amount' | 'units'
+  const [search, setSearch] = useState('')
+
+  const cashBalance = portfolio?.cash_balance ?? 0
+
+  // Instruments available for sell = only those the user holds
+  const heldCodes = new Set((portfolio?.holdings || []).map(h => (h.asset_code || '').toUpperCase()))
+
+  const filteredInstruments = INSTRUMENTS.filter(ins => {
+    if (tradeForm.action === 'sell' && !heldCodes.has(ins.code.toUpperCase())) return false
+    if (!search.trim()) return true
+    const q = search.toLowerCase()
+    return ins.name.toLowerCase().includes(q) || ins.code.toLowerCase().includes(q) || ins.category.toLowerCase().includes(q)
+  })
+
+  // Selected instrument
+  const selected = INSTRUMENTS.find(i => i.code === tradeForm.asset_code) || null
+  const nav = selected?.nav ?? 0
+
+  // Find holding for selected instrument (for sell)
+  const holding = (portfolio?.holdings || []).find(h => (h.asset_code || '').toUpperCase() === tradeForm.asset_code.toUpperCase())
+  const unitsHeld = holding?.units_held ?? 0
+  const holdingValue = unitsHeld * nav
+
+  // Derived quantity / value
+  const quantity = Number(tradeForm.quantity) || 0
+  const estimatedValue = Number(tradeForm.estimated_value) || 0
+
+  // Buy validations
+  const buyInsufficient = tradeForm.action === 'buy' && estimatedValue > 0 && estimatedValue > cashBalance
+  const buyShortfall = Math.max(0, estimatedValue - cashBalance)
+
+  // Sell validations
+  const sellExceedsHolding = tradeForm.action === 'sell' && quantity > 0 && quantity > unitsHeld
+  const sellExceedsValue = tradeForm.action === 'sell' && estimatedValue > 0 && estimatedValue > holdingValue
+
+  const canSubmit = selected && quantity > 0 && estimatedValue > 0 && !buyInsufficient && !sellExceedsHolding && !tradeSubmitting
+
+  const handleSelectInstrument = (ins) => {
+    setTradeForm(f => ({
+      ...f,
+      asset_code: ins.code,
+      asset_type: ins.type,
+      quantity: '',
+      estimated_value: '',
+    }))
+    setSearch('')
+  }
+
+  const handleAmountChange = (val) => {
+    const amt = parseFloat(val) || 0
+    setTradeForm(f => ({
+      ...f,
+      estimated_value: val,
+      quantity: nav > 0 && amt > 0 ? (amt / nav).toFixed(4) : '',
+    }))
+  }
+
+  const handleUnitsChange = (val) => {
+    const units = parseFloat(val) || 0
+    setTradeForm(f => ({
+      ...f,
+      quantity: val,
+      estimated_value: nav > 0 && units > 0 ? (units * nav).toFixed(2) : '',
+    }))
+  }
+
+  const handleActionChange = (action) => {
+    setTradeForm(f => ({ ...f, action, asset_code: '', quantity: '', estimated_value: '' }))
+    setSearch('')
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-4">
+      <div className="bg-white rounded-2xl w-full max-w-md shadow-xl max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <ArrowUpDown size={16} className="text-[#1D6FDB]" />
+            <span className="text-base font-bold text-gray-900">New Trade</span>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+        </div>
+
+        <div className="overflow-y-auto px-6 py-4 space-y-4">
+          {/* Buy / Sell toggle */}
+          <div className="grid grid-cols-2 gap-2">
+            {['buy', 'sell'].map(a => (
+              <button
+                key={a}
+                onClick={() => handleActionChange(a)}
+                className={`py-2 rounded-xl text-sm font-semibold border-2 transition-colors ${
+                  tradeForm.action === a
+                    ? a === 'buy' ? 'border-green-500 bg-green-50 text-green-700' : 'border-red-400 bg-red-50 text-red-700'
+                    : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                }`}
+              >
+                {a === 'buy' ? '🟢 Buy' : '🔴 Sell'}
+              </button>
+            ))}
+          </div>
+
+          {/* Cash balance pill (buy only) */}
+          {tradeForm.action === 'buy' && (
+            <div className={`text-xs px-3 py-1.5 rounded-lg font-medium ${buyInsufficient ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-700'}`}>
+              Available cash: {fmt.inr(cashBalance)}
+              {buyInsufficient && estimatedValue > 0 && ` · Shortfall: ${fmt.inr(buyShortfall)}`}
+            </div>
+          )}
+
+          {/* Instrument dropdown */}
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">
+              {tradeForm.action === 'sell' ? 'Select from your holdings' : 'Select instrument'}
+            </label>
+
+            {/* Search box */}
+            <input
+              type="text"
+              placeholder={selected ? selected.name : 'Search by name, code or category…'}
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              onFocus={() => { if (selected) setSearch('') }}
+              className={INPUT_CLS}
+            />
+
+            {/* Dropdown list */}
+            {(search.trim() || !selected) && filteredInstruments.length > 0 && (
+              <div className="mt-1 border border-gray-200 rounded-xl overflow-hidden shadow-sm max-h-44 overflow-y-auto">
+                {filteredInstruments.map(ins => (
                   <button
-                    key={a}
-                    onClick={() => setTradeForm(f => ({ ...f, action: a }))}
-                    className={`py-2 rounded-xl text-sm font-semibold border-2 transition-colors ${
-                      tradeForm.action === a
-                        ? a === 'buy' ? 'border-green-500 bg-green-50 text-green-700' : 'border-red-400 bg-red-50 text-red-700'
-                        : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                    key={ins.code}
+                    onClick={() => handleSelectInstrument(ins)}
+                    className={`w-full text-left px-3 py-2.5 text-sm hover:bg-blue-50 transition-colors flex items-center justify-between gap-2 border-b border-gray-50 last:border-0 ${tradeForm.asset_code === ins.code ? 'bg-blue-50' : ''}`}
+                  >
+                    <div>
+                      <span className="font-medium text-gray-900">{ins.name}</span>
+                      <span className="ml-2 text-xs text-gray-400">{ins.code}</span>
+                      <div className="text-xs text-gray-400">{ins.category}</div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-xs font-semibold text-gray-700">{fmt.inr(ins.nav)}</div>
+                      <div className="text-[10px] text-gray-400">{ins.type === 'stock' ? 'per share' : 'NAV'}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {tradeForm.action === 'sell' && filteredInstruments.length === 0 && !search && (
+              <p className="text-xs text-gray-400 mt-1 px-1">No holdings found. Add holdings in your portfolio first.</p>
+            )}
+          </div>
+
+          {/* Selected instrument summary */}
+          {selected && (
+            <div className="bg-gray-50 rounded-xl px-4 py-3 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-gray-900">{selected.name}</p>
+                <p className="text-xs text-gray-500">{selected.category} · {selected.code}</p>
+                {tradeForm.action === 'sell' && (
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    You hold: <span className="font-medium text-gray-700">{unitsHeld.toFixed(4)} units</span>
+                    <span className="text-gray-400"> (≈ {fmt.inr(holdingValue)})</span>
+                  </p>
+                )}
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-bold text-gray-900">{fmt.inr(selected.nav)}</p>
+                <p className="text-xs text-gray-400">{selected.type === 'stock' ? 'per share' : 'NAV'}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Input mode toggle + amount/units fields */}
+          {selected && (
+            <div>
+              <div className="flex gap-2 mb-3">
+                {['amount', 'units'].map(m => (
+                  <button
+                    key={m}
+                    onClick={() => {
+                      setInputMode(m)
+                      setTradeForm(f => ({ ...f, quantity: '', estimated_value: '' }))
+                    }}
+                    className={`flex-1 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
+                      inputMode === m ? 'border-[#1D6FDB] bg-blue-50 text-[#1D6FDB]' : 'border-gray-200 text-gray-500'
                     }`}
                   >
-                    {a === 'buy' ? '🟢 Buy' : '🔴 Sell'}
+                    {m === 'amount' ? 'By Amount (₹)' : 'By Units'}
                   </button>
                 ))}
               </div>
 
-              {/* Asset type */}
-              <select
-                value={tradeForm.asset_type}
-                onChange={e => setTradeForm(f => ({ ...f, asset_type: e.target.value }))}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              >
-                {['stock','mutual_fund','crypto','bond','commodity','forex'].map(t => (
-                  <option key={t} value={t}>{t.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</option>
-                ))}
-              </select>
-
-              {/* Asset code */}
-              <input
-                type="text"
-                placeholder="Asset code (e.g. RELIANCE, BTC)"
-                value={tradeForm.asset_code}
-                onChange={e => setTradeForm(f => ({ ...f, asset_code: e.target.value.toUpperCase() }))}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              />
-
-              {/* Quantity + Value */}
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="number"
-                  placeholder="Quantity (units)"
-                  value={tradeForm.quantity}
-                  onChange={e => setTradeForm(f => ({ ...f, quantity: e.target.value }))}
-                  className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                />
-                <input
-                  type="number"
-                  placeholder="Value (₹)"
-                  value={tradeForm.estimated_value}
-                  onChange={e => setTradeForm(f => ({ ...f, estimated_value: e.target.value }))}
-                  className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                />
-              </div>
-
-              {/* Note */}
-              <input
-                type="text"
-                placeholder="Note (optional)"
-                value={tradeForm.client_note}
-                onChange={e => setTradeForm(f => ({ ...f, client_note: e.target.value }))}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              />
-
-              {tradeFormError && (
-                <div className="text-xs text-red-600 font-medium bg-red-50 rounded-lg px-3 py-2">⚠️ {tradeFormError}</div>
+              {inputMode === 'amount' ? (
+                <div>
+                  <input
+                    type="number"
+                    placeholder="Amount in ₹"
+                    value={tradeForm.estimated_value}
+                    onChange={e => handleAmountChange(e.target.value)}
+                    className={INPUT_CLS}
+                    min="0"
+                  />
+                  {quantity > 0 && (
+                    <p className="text-xs text-gray-400 mt-1 px-1">≈ {Number(tradeForm.quantity).toFixed(4)} units @ {fmt.inr(nav)}</p>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <input
+                    type="number"
+                    placeholder={`Number of ${selected.type === 'stock' ? 'shares' : 'units'}`}
+                    value={tradeForm.quantity}
+                    onChange={e => handleUnitsChange(e.target.value)}
+                    className={INPUT_CLS}
+                    min="0"
+                  />
+                  {estimatedValue > 0 && (
+                    <p className="text-xs text-gray-400 mt-1 px-1">≈ {fmt.inr(estimatedValue)} @ {fmt.inr(nav)}</p>
+                  )}
+                </div>
               )}
 
-              <button
-                onClick={handleSubmitTrade}
-                disabled={tradeSubmitting}
-                className="w-full py-2.5 bg-[#1D6FDB] text-white text-sm font-semibold rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors"
-              >
-                {tradeSubmitting ? 'Submitting…' : 'Submit Trade'}
-              </button>
-              <p className="text-xs text-gray-400 text-center">
-                {user?.advisor_id
-                  ? 'Trade settles immediately. Your advisor is notified.'
-                  : 'Trade settles immediately. Link an advisor to share future trades.'}
-              </p>
+              {/* Sell over-holding warning */}
+              {tradeForm.action === 'sell' && sellExceedsHolding && (
+                <p className="text-xs text-red-600 font-medium bg-red-50 rounded-lg px-3 py-2 mt-2">
+                  ⚠ You only hold {unitsHeld.toFixed(4)} units. Reduce quantity.
+                </p>
+              )}
+              {tradeForm.action === 'sell' && sellExceedsValue && !sellExceedsHolding && (
+                <p className="text-xs text-red-600 font-medium bg-red-50 rounded-lg px-3 py-2 mt-2">
+                  ⚠ Amount exceeds holding value of {fmt.inr(holdingValue)}.
+                </p>
+              )}
+
+              {/* Buy cash warning */}
+              {tradeForm.action === 'buy' && buyInsufficient && (
+                <p className="text-xs text-red-600 font-medium bg-red-50 rounded-lg px-3 py-2 mt-2">
+                  ⚠ Insufficient cash. Add {fmt.inr(buyShortfall)} to proceed.
+                </p>
+              )}
             </div>
-          </div>
+          )}
+
+          {/* Note */}
+          <input
+            type="text"
+            placeholder="Note (optional)"
+            value={tradeForm.client_note}
+            onChange={e => setTradeForm(f => ({ ...f, client_note: e.target.value }))}
+            className={INPUT_CLS}
+          />
+
+          {tradeFormError && (
+            <div className="text-xs text-red-600 font-medium bg-red-50 rounded-lg px-3 py-2">⚠️ {tradeFormError}</div>
+          )}
         </div>
-      )}
+
+        {/* Footer */}
+        <div className="px-6 pb-5 pt-3 border-t border-gray-100 space-y-2">
+          <button
+            onClick={onSubmit}
+            disabled={!canSubmit}
+            className="w-full py-2.5 bg-[#1D6FDB] text-white text-sm font-semibold rounded-xl hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            {tradeSubmitting ? 'Submitting…' : `${tradeForm.action === 'buy' ? 'Buy' : 'Sell'} ${selected ? selected.name.split(' ')[0] : ''}`.trim() || 'Submit Trade'}
+          </button>
+          <p className="text-xs text-gray-400 text-center">
+            {advisorLinked ? 'Trade settles immediately. Your advisor is notified.' : 'Trade settles immediately.'}
+          </p>
+        </div>
+      </div>
     </div>
   )
 }
