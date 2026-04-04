@@ -122,6 +122,21 @@ Click **Sign Out** in the sidebar (desktop) or the logout icon in the top bar (m
 
 ## Version History
 
+### v0.4.0 (2026-04-04)
+- **Instrument Dropdown — Trade Modal:** Replaced free-text entry with a searchable instrument dropdown
+  - 30 instruments: 10 NIFTY stocks + 20 MFs (equity index, debt, money market) + BTC + ETH
+  - Buy: full list; sell: filtered to instruments you actually hold
+  - Toggle between **By Amount (₹)** and **By Units** — other field auto-fills using NAV
+  - Sell validation: blocks if quantity exceeds units held
+  - Minimum quantities: crypto 0.0001 units, stocks 1 unit (whole shares only)
+- **Live Price Refresh:** Your portfolio NAVs are refreshed from live sources every time you open the dashboard
+  - Mutual funds: AMFI India (official daily NAVs)
+  - Bitcoin & Ethereum: CoinGecko (real-time INR)
+  - Stocks: NSE via Yahoo Finance feed
+  - 5-minute cache prevents repeated API calls
+- **Starter Portfolio:** All new accounts now start with a default portfolio
+  - 10 NIFTY stocks + 10 MFs + 5 BTC + 5 ETH + ₹5L cash balance
+
 ### v0.3.0 (2026-04-03)
 - **Client-Initiated Trades:** New Trade button always visible — initiate your own trades without an advisor
   - Buy/Sell toggle, asset type + code, quantity + value

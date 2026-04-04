@@ -57,22 +57,57 @@
 ### Parked
 - V3 mockup (declutter pass) — next design session
 
+## Session 3 (2026-03-28) — Trade Notifications Integration
+
+### What Shipped
+- **FEAT: Trade Approval Notifications** ✅
+  - Backend: Shared with aria-advisor (trade_submitted, trade_approved, trade_rejected notifications)
+  - Frontend: Dashboard now fetches + displays trade notifications via alert banner
+  - UI: Trade status colors (pending=yellow, approved=green, rejected=red, settled=blue)
+  - Issue fixed: Joshua's notifications now display (portfolio link validation added to backend)
+- **HELP.md updated** — Trade Approval flow documented from client perspective (v0.2.0)
+
+### Open Flags
+- E2E test for trade workflow not yet written (Layer 3 in prevention strategy)
+- Unit test fixture for linked_client_and_personal_user not yet created (Layer 2)
+- Full advisor → client workflow manual test done, automated test pending
+
 ## Next Session Agenda ← START HERE NEXT SESSION
 
-### 1. FEAT-P001 — Portfolio Add/Edit UI
+### 1. Layer 2: Test Fixture — linked_client_and_personal_user
+- Create pytest fixture enforcing two-way portfolio/client linking
+- Use for all future trade notification tests
+
+### 2. Layer 3: E2E Test — Full Trade Workflow
+- Test: Advisor creates trade → submits → client sees notification → approves
+- Cover both happy path + rejection flow
+
+### 3. FEAT-P001 — Portfolio Add/Edit UI
 - Dashboard currently shows empty state for portfolio — user needs a way to add holdings
 - Build `/portfolio/edit` page with fund selector, allocation inputs, save flow
-- Mirror ClientForm Tab 3 logic but consumer-facing
 
-### 2. FEAT-P002 — Onboarding flow
+### 4. FEAT-P002 — Onboarding flow
 - After register → risk questionnaire (5 questions) → redirect to dashboard
-- Sets risk_score + risk_category on PersonalUser via PUT /personal/auth/profile
+- Sets risk_score + risk_category on PersonalUser
 
-### 3. FEAT-P003 — Vercel deploy + env vars
-- Deploy to Vercel, set VITE_API_URL
-- Update Render: JWT_SECRET_KEY + PERSONAL_FRONTEND_URL
+## What Shipped This Session (2026-04-04 — Session 16)
 
-## Open Flags
-- Portfolio edit page not built yet — Dashboard shows empty state but no way to add data
-- JWT_SECRET_KEY needs to be set in Render env vars before auth will work in prod
-- PERSONAL_FRONTEND_URL needs to be set in Render once Vercel URL is known
+### Instrument Dropdown — Trade Modal ✅
+- 30 instruments (10 stocks + 20 MFs + BTC + ETH) replace free-text entry
+- Sell: filtered to held instruments; validates against units_held
+- Buy: full list + amount↔units NAV auto-calc (By Amount / By Units toggle)
+- Min qty: crypto 0.0001, stocks 1 unit — frontend inline error + backend 400
+
+### Live Price Refresh ✅
+- `refreshMyPrices()` fires before portfolio render on Dashboard load
+- Sources: AMFI (MFs), CoinGecko (BTC/ETH INR), yfinance NSE (stocks)
+- 5-min in-process cache on backend; portfolio total_value auto-updated
+
+### Starter Portfolio Seed ✅
+- All new signups get: 10 stocks + 10 MFs + 5 BTC + 5 ETH + ₹5L cash
+- Kate and Ruben backfilled on next backend restart
+
+## Next Session Agenda
+- FEAT-P001 Portfolio Add/Edit UI (still pending)
+- FEAT-P002 Onboarding risk questionnaire (still pending)
+- FEAT-2005 Trade Compliance (consent + risk warning modals)
