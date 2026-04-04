@@ -24,6 +24,7 @@ export const login = (data) => api.post('/personal/auth/login', data).then(r => 
 export const getMe = () => api.get('/personal/auth/me').then(r => r.data)
 export const updateProfile = (data) => api.put('/personal/auth/profile', data).then(r => r.data)
 export const linkAdvisor = (referral_code) => api.post('/personal/auth/link-advisor', { referral_code }).then(r => r.data)
+export const delinkAdvisor = () => api.post('/personal/auth/delink-advisor').then(r => r.data)
 
 // ─── Portfolio ───────────────────────────────────────────────────────────────
 export const getPortfolio = () => api.get('/personal/portfolio').then(r => r.data)
@@ -67,6 +68,13 @@ export const deleteNotification = (notificationId) =>
   api.delete(`/notifications/${notificationId}`).then(r => r.data)
 
 // ─── Formatters ──────────────────────────────────────────────────────────────
+// Price refresh — fires after portfolio load to update NAVs
+export const refreshMyPrices = () => {
+  const uid = localStorage.getItem('aria_personal_user_id')
+  if (!uid) return Promise.resolve()
+  return api.post(`/prices/refresh/personal/${uid}`).then(r => r.data).catch(() => null)
+}
+
 export const fmt = {
   inr: (v) => {
     const n = Number(v)

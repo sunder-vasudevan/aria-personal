@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { useAuth } from '../auth/useAuth'
-import { getPortfolio, getGoals, getMyTrades, approveTrade, rejectTrade, getClientNotifications, submitMyTrade, checkBalance, fmt } from '../api/personal'
+import { getPortfolio, getGoals, getMyTrades, approveTrade, rejectTrade, getClientNotifications, submitMyTrade, checkBalance, refreshMyPrices, fmt } from '../api/personal'
 import { TrendingUp, Target, Plus, ChevronRight, AlertCircle, Pencil, CheckCircle, X, ArrowUpDown, Eye, EyeOff } from 'lucide-react'
 import PortfolioEditor from '../components/PortfolioEditor'
 
@@ -73,10 +73,19 @@ export default function Dashboard() {
   const [checkingBalance, setCheckingBalance] = useState(null)  // trade id being checked
 
   function load() {
-    return Promise.all([getPortfolio(), getGoals(), getMyTrades(), getClientNotifications()])
-      .then(([p, g, t, n]) => { setPortfolio(p); setGoals(g); setTrades(t); setNotifications(n?.notifications || []) })
-      .catch(err => { console.error(err); setTrades([]); setNotifications([]) })
-      .finally(() => setLoading(false))
+    // Fire price refresh in background (5-min cached — won't hammer the API)
+    refreshMyPrices().then(() => {
+      return Promise.all([getPortfolio(), getGoals(), getMyTrades(), getClientNotifications()])
+        .then(([p, g, t, n]) => { setPortfolio(p); setGoals(g); setTrades(t); setNotifications(n?.notifications || []) })
+        .catch(err => { console.error(err); setTrades([]); setNotifications([]) })
+        .finally(() => setLoading(false))
+    }).catch(() => {
+      // Refresh failed — still load with stale prices
+      Promise.all([getPortfolio(), getGoals(), getMyTrades(), getClientNotifications()])
+        .then(([p, g, t, n]) => { setPortfolio(p); setGoals(g); setTrades(t); setNotifications(n?.notifications || []) })
+        .catch(err => { console.error(err); setTrades([]); setNotifications([]) })
+        .finally(() => setLoading(false))
+    })
   }
 
   useEffect(() => { load() }, [])
