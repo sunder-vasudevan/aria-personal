@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { useAuth } from '../auth/useAuth'
 import { getPortfolio, getGoals, getMyTrades, approveTrade, rejectTrade, getClientNotifications, submitMyTrade, checkBalance, refreshMyPrices, fmt } from '../api/personal'
-import { TrendingUp, Target, Plus, ChevronRight, AlertCircle, Pencil, CheckCircle, X, ArrowUpDown, Eye, EyeOff } from 'lucide-react'
+import { TrendingUp, Target, Plus, ChevronRight, AlertCircle, Pencil, CheckCircle, X, ArrowUpDown, Eye, EyeOff, ShieldAlert } from 'lucide-react'
 import PortfolioEditor from '../components/PortfolioEditor'
 
 const CATEGORY_COLORS = {
@@ -251,6 +251,21 @@ export default function Dashboard() {
               <X size={16} />
             </button>
           </div>
+        </div>
+      )}
+
+      {/* ── KYC Rejection Banner ── */}
+      {notifications.some(n => n.notification_type === 'kyc_doc_rejected' && !n.read) && (
+        <div
+          className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-4 cursor-pointer hover:bg-amber-100 transition-colors"
+          onClick={() => navigate('/kyc')}
+        >
+          <ShieldAlert size={18} className="text-amber-600 flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-amber-900">Action required — KYC document rejected</p>
+            <p className="text-xs text-amber-700 mt-0.5">Your advisor has flagged a document for re-upload. Tap to review and re-upload.</p>
+          </div>
+          <ChevronRight size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
         </div>
       )}
 

@@ -57,6 +57,19 @@ export const updateCryptoTxHash = (tradeId, data) => api.put(`/trades/${tradeId}
 export const submitMyTrade = (data) => api.post('/trades/personal/me/trades', data).then(r => r.data)
 export const checkBalance = (params) => api.get('/trades/personal/me/balance-check', { params }).then(r => r.data)
 
+// ─── KYC ─────────────────────────────────────────────────────────────────────
+export const getKycStatus = () =>
+  api.get('/personal/kyc/status').then(r => r.data)
+
+export const uploadKycDocument = (docType, file) => {
+  const form = new FormData()
+  form.append('file', file)
+  form.append('doc_type', docType)
+  return api.post('/personal/kyc/documents', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }).then(r => r.data)
+}
+
 // ─── Notifications (FEAT-1004) ────────────────────────────────────────────────
 export const getClientNotifications = (limit = 20) =>
   api.get(`/notifications/personal/me?limit=${limit}`).then(r => r.data)
