@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
-import { ShieldCheck, ShieldAlert, Shield, Clock, CheckCircle, XCircle, Upload, Loader2, FileText } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { ShieldCheck, ShieldAlert, Shield, Clock, CheckCircle, XCircle, Upload, Loader2, FileText, Lock } from 'lucide-react'
 import { getKycStatus, uploadKycDocument } from '../api/personal'
+import { useAuth } from '../auth/useAuth'
 
 const DOC_SLOTS = [
   { type: 'pan_card',      label: 'PAN Card',      hint: 'JPG, PNG or PDF' },
@@ -18,6 +20,8 @@ const STATUS_CONFIG = {
 }
 
 export default function Kyc() {
+  const { user } = useAuth()
+  const navigate = useNavigate()
   const [kycStatus, setKycStatus] = useState('not_started')
   const [docs, setDocs] = useState([])
   const [loading, setLoading] = useState(true)
@@ -64,6 +68,34 @@ export default function Kyc() {
     return (
       <div className="flex items-center justify-center h-48">
         <Loader2 size={24} className="animate-spin text-gray-400" />
+      </div>
+    )
+  }
+
+  if (!user?.advisor_id) {
+    return (
+      <div className="max-w-lg mx-auto px-4 py-6">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">KYC Verification</h1>
+          <p className="text-sm text-gray-500 mt-1">Identity verification for advisor-managed accounts.</p>
+        </div>
+        <div className="mt-8 flex flex-col items-center text-center gap-4 bg-gray-50 border border-gray-200 rounded-2xl p-8">
+          <div className="w-14 h-14 rounded-full bg-indigo-50 flex items-center justify-center">
+            <Lock size={24} className="text-indigo-400" />
+          </div>
+          <div>
+            <p className="text-base font-semibold text-gray-800">KYC not required yet</p>
+            <p className="text-sm text-gray-500 mt-1 max-w-xs">
+              KYC verification is only required once you connect with an advisor. Connect with an advisor to get started.
+            </p>
+          </div>
+          <button
+            onClick={() => navigate('/profile')}
+            className="mt-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors"
+          >
+            Find an Advisor
+          </button>
+        </div>
       </div>
     )
   }
