@@ -2,27 +2,14 @@ import axios from 'axios'
 
 const BASE = import.meta.env.VITE_API_URL || 'https://aria-advisor.onrender.com'
 
-const api = axios.create({ baseURL: BASE })
-
-// Inject JWT on every request + extract user ID for trade operations
-api.interceptors.request.use(config => {
-  const token = localStorage.getItem('aria_personal_token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-    // Extract user ID from JWT
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]))
-      if (payload.user_id) config.headers['X-Personal-User-Id'] = payload.user_id
-    } catch {}
-  }
-  return config
-})
+const api = axios.create({ baseURL: BASE, withCredentials: true })
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
 export const register = (data) => api.post('/personal/auth/register', data).then(r => r.data)
 export const login = (data) => api.post('/personal/auth/login', data).then(r => r.data)
 export const getMe = () => api.get('/personal/auth/me').then(r => r.data)
 export const updateProfile = (data) => api.put('/personal/auth/profile', data).then(r => r.data)
+export const logoutApi = () => api.post('/personal/auth/logout').then(r => r.data).catch(() => null)
 export const linkAdvisor = (referral_code) => api.post('/personal/auth/link-advisor', { referral_code }).then(r => r.data)
 export const delinkAdvisor = () => api.post('/personal/auth/delink-advisor').then(r => r.data)
 
@@ -83,8 +70,7 @@ export const deleteNotification = (notificationId) =>
 
 // ─── Formatters ──────────────────────────────────────────────────────────────
 // Price refresh — fires after portfolio load to update NAVs
-export const refreshMyPrices = () => {
-  const uid = localStorage.getItem('aria_personal_user_id')
+export const refreshMyPrices = (uid) => {
   if (!uid) return Promise.resolve()
   return api.post(`/prices/refresh/personal/${uid}`).then(r => r.data).catch(() => null)
 }

@@ -78,7 +78,7 @@ export default function Dashboard() {
   function load() {
     getPortfolioHistory().then(h => setPortfolioHistory(h)).catch(() => {})
     // Fire price refresh in background (5-min cached — won't hammer the API)
-    refreshMyPrices().then(() => {
+    refreshMyPrices(user?.id).then(() => {
       return Promise.all([getPortfolio(), getGoals(), getMyTrades(), getClientNotifications()])
         .then(([p, g, t, n]) => { setPortfolio(p); setGoals(g); setTrades(t); setNotifications(n?.notifications || []) })
         .catch(err => { console.error(err); setTrades([]); setNotifications([]) })

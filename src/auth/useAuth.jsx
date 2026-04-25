@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { login as apiLogin, register as apiRegister, getMe } from '../api/personal'
+import { login as apiLogin, register as apiRegister, getMe, logoutApi } from '../api/personal'
 
 const AuthContext = createContext(null)
 
@@ -8,23 +8,14 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const token = localStorage.getItem('aria_personal_token')
-    if (token) {
-      getMe()
-        .then(setUser)
-        .catch(() => {
-          localStorage.removeItem('aria_personal_token')
-          setUser(null)
-        })
-        .finally(() => setLoading(false))
-    } else {
-      setLoading(false)
-    }
+    getMe()
+      .then(setUser)
+      .catch(() => setUser(null))
+      .finally(() => setLoading(false))
   }, [])
 
   const login = async (email, password) => {
     const data = await apiLogin({ email, password })
-    localStorage.setItem('aria_personal_token', data.access_token)
     const full = await getMe()
     setUser(full)
     return data
@@ -36,14 +27,13 @@ export function AuthProvider({ children }) {
       ...(referral_code ? { referral_code } : {}),
       ...(invite_token ? { invite_token } : {}),
     })
-    localStorage.setItem('aria_personal_token', data.access_token)
     const full = await getMe()
     setUser(full)
     return data
   }
 
-  const logout = () => {
-    localStorage.removeItem('aria_personal_token')
+  const logout = async () => {
+    await logoutApi()
     setUser(null)
   }
 
