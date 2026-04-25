@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, LabelList, LineChart, Line, CartesianGrid } from 'recharts'
 import { useAuth } from '../auth/useAuth'
-import { getPortfolio, getGoals, getMyTrades, approveTrade, rejectTrade, getClientNotifications, submitMyTrade, checkBalance, refreshMyPrices, getPortfolioHistory, fmt } from '../api/personal'
-import { TrendingUp, Target, Plus, ChevronRight, ChevronDown, AlertCircle, Pencil, CheckCircle, X, ArrowUpDown, Eye, EyeOff, ShieldAlert } from 'lucide-react'
+import { getPortfolio, getGoals, getMyTrades, approveTrade, rejectTrade, getClientNotifications, submitMyTrade, checkBalance, refreshMyPrices, getPortfolioHistory, getMyHousehold, toggleMyHouseholdPrivacy, fmt } from '../api/personal'
+import { TrendingUp, Target, Plus, ChevronRight, ChevronDown, AlertCircle, Pencil, CheckCircle, X, ArrowUpDown, Eye, EyeOff, ShieldAlert, Users } from 'lucide-react'
 import PortfolioEditor from '../components/PortfolioEditor'
 
 const CATEGORY_COLORS = {
@@ -60,6 +60,7 @@ export default function Dashboard() {
   const [holdingsOpen, setHoldingsOpen] = useState(false)
   const [goalsOpen, setGoalsOpen] = useState(false)
   const [portfolioHistory, setPortfolioHistory] = useState(null)
+  const [household, setHousehold] = useState(null)
   const [advisorBannerDismissed, setAdvisorBannerDismissed] = useState(() => {
     return localStorage.getItem('aria_advisor_banner_dismissed') === '1'
   })
@@ -93,6 +94,7 @@ export default function Dashboard() {
   }
 
   useEffect(() => { load() }, [])
+  useEffect(() => { getMyHousehold().then(setHousehold).catch(() => {}) }, [])
 
   const handleApproveTrade = async (trade) => {
     try {
@@ -254,6 +256,48 @@ export default function Dashboard() {
             >
               <X size={16} />
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Your Household card ── */}
+      {household && (
+        <div className="bg-white border border-gray-100 rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Users size={16} className="text-indigo-600" />
+              <span className="text-sm font-semibold text-gray-900">{household.household?.name}</span>
+            </div>
+            <span className="text-xs text-gray-400">{household.members?.length} member{household.members?.length !== 1 ? 's' : ''}</span>
+          </div>
+          <div className="text-xl font-bold text-indigo-700 mb-3">{fmt.inr(household.aggregated?.total_aum)}</div>
+          <div className="space-y-2">
+            {household.members?.map(m => (
+              <div key={m.id} className="flex items-center justify-between">
+                <span className="text-sm text-gray-700">{m.name}{m.is_me && <span className="ml-1 text-xs text-indigo-500">(you)</span>}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-gray-900">
+                    {m.portfolio_value != null ? fmt.inr(m.portfolio_value) : '—'}
+                  </span>
+                  {m.is_me && (
+                    <button
+                      onClick={async () => {
+                        const newVal = m.portfolio_value == null
+                        await toggleMyHouseholdPrivacy(newVal)
+                        setHousehold(prev => ({
+                          ...prev,
+                          members: prev.members.map(x => x.is_me ? { ...x, portfolio_value: newVal ? x._cached_value : null } : x)
+                        }))
+                      }}
+                      className="text-gray-400 hover:text-indigo-600 transition-colors"
+                      title={m.portfolio_value != null ? 'Hide my value' : 'Show my value'}
+                    >
+                      {m.portfolio_value != null ? <Eye size={13} /> : <EyeOff size={13} />}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

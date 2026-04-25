@@ -10,6 +10,8 @@ export const login = (data) => api.post('/personal/auth/login', data).then(r => 
 export const getMe = () => api.get('/personal/auth/me').then(r => r.data)
 export const updateProfile = (data) => api.put('/personal/auth/profile', data).then(r => r.data)
 export const logoutApi = () => api.post('/personal/auth/logout').then(r => r.data).catch(() => null)
+export const getMyHousehold = () => api.get('/personal/portfolio/household').then(r => r.data)
+export const toggleMyHouseholdPrivacy = (show) => api.patch('/personal/portfolio/household/privacy', { show_individual_values: show }).then(r => r.data)
 export const linkAdvisor = (referral_code) => api.post('/personal/auth/link-advisor', { referral_code }).then(r => r.data)
 export const delinkAdvisor = () => api.post('/personal/auth/delink-advisor').then(r => r.data)
 
