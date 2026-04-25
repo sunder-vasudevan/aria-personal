@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, LabelList, LineChart, Line, CartesianGrid } from 'recharts'
 import { useAuth } from '../auth/useAuth'
-import { getPortfolio, getGoals, getMyTrades, approveTrade, rejectTrade, getClientNotifications, submitMyTrade, checkBalance, refreshMyPrices, fmt } from '../api/personal'
-import { TrendingUp, Target, Plus, ChevronRight, AlertCircle, Pencil, CheckCircle, X, ArrowUpDown, Eye, EyeOff, ShieldAlert } from 'lucide-react'
+import { getPortfolio, getGoals, getMyTrades, approveTrade, rejectTrade, getClientNotifications, submitMyTrade, checkBalance, refreshMyPrices, getPortfolioHistory, fmt } from '../api/personal'
+import { TrendingUp, Target, Plus, ChevronRight, ChevronDown, AlertCircle, Pencil, CheckCircle, X, ArrowUpDown, Eye, EyeOff, ShieldAlert } from 'lucide-react'
 import PortfolioEditor from '../components/PortfolioEditor'
 
 const CATEGORY_COLORS = {
@@ -57,6 +57,9 @@ export default function Dashboard() {
   const [approvingTradeId, setApprovingTradeId] = useState(null)
   const [tradeError, setTradeError] = useState('')
   const [showBalances, setShowBalances] = useState(false)
+  const [holdingsOpen, setHoldingsOpen] = useState(false)
+  const [goalsOpen, setGoalsOpen] = useState(false)
+  const [portfolioHistory, setPortfolioHistory] = useState(null)
   const [advisorBannerDismissed, setAdvisorBannerDismissed] = useState(() => {
     return localStorage.getItem('aria_advisor_banner_dismissed') === '1'
   })
@@ -73,6 +76,7 @@ export default function Dashboard() {
   const [checkingBalance, setCheckingBalance] = useState(null)  // trade id being checked
 
   function load() {
+    getPortfolioHistory().then(h => setPortfolioHistory(h)).catch(() => {})
     // Fire price refresh in background (5-min cached — won't hammer the API)
     refreshMyPrices().then(() => {
       return Promise.all([getPortfolio(), getGoals(), getMyTrades(), getClientNotifications()])
@@ -443,20 +447,91 @@ export default function Dashboard() {
             </div>
           )}
 
-          <div className="space-y-2">
-            {portfolio.holdings.map(h => (
-              <div key={h.id} className="flex items-center justify-between py-2 border-t border-gray-50 first:border-0">
-                <div className="min-w-0">
-                  <div className="text-sm font-semibold text-gray-900 truncate">{h.fund_name}</div>
-                  <div className="text-xs text-gray-400">{h.fund_house} · {h.fund_category}</div>
+          {portfolioHistory && portfolioHistory.length > 1 && (
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Portfolio Growth</div>
+              <ResponsiveContainer width="100%" height={120}>
+                <LineChart data={portfolioHistory} margin={{ left: 0, right: 4, top: 4, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
+                  <YAxis
+                    tickFormatter={v => v >= 1e7 ? `${(v/1e7).toFixed(1)}Cr` : v >= 1e5 ? `${(v/1e5).toFixed(0)}L` : `${v}`}
+                    tick={{ fontSize: 9, fill: '#9ca3af' }}
+                    tickLine={false}
+                    axisLine={false}
+                    width={40}
+                  />
+                  <Tooltip
+                    formatter={(v) => [fmt.inr(v), 'Value']}
+                    labelStyle={{ fontSize: 10 }}
+                    contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 10 }}
+                  />
+                  <Line type="monotone" dataKey="value" stroke="#1D6FDB" strokeWidth={2} dot={false} activeDot={{ r: 3 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          <button
+            onClick={() => setHoldingsOpen(o => !o)}
+            className="w-full flex items-center justify-between pt-3 border-t border-gray-100 text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            <span>Holdings ({portfolio.holdings.length})</span>
+            <ChevronDown size={14} className={`transition-transform ${holdingsOpen ? 'rotate-180' : ''}`} />
+          </button>
+          {holdingsOpen && (
+            <div className="space-y-2 mt-1">
+              {portfolio.holdings.map(h => (
+                <div key={h.id} className="flex items-center justify-between py-2 border-t border-gray-50 first:border-0">
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-gray-900 truncate">{h.fund_name}</div>
+                    <div className="text-xs text-gray-400">{h.fund_house} · {h.fund_category}</div>
+                  </div>
+                  <div className="text-right flex-shrink-0 ml-3">
+                    <div className="text-sm font-bold text-gray-900 tabular-nums">{fmt.inr(h.current_value)}</div>
+                    {h.unrealised_pnl != null ? (
+                      <div className={`text-xs font-semibold tabular-nums ${h.unrealised_pnl >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                        {h.unrealised_pnl >= 0 ? '▲' : '▼'} {Math.abs(h.unrealised_pnl_pct || 0).toFixed(1)}%
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-400 tabular-nums">{h.current_pct.toFixed(1)}%</div>
+                    )}
+                  </div>
                 </div>
-                <div className="text-right flex-shrink-0 ml-3">
-                  <div className="text-sm font-bold text-gray-900 tabular-nums">{fmt.inr(h.current_value)}</div>
-                  <div className="text-xs text-gray-400 tabular-nums">{h.current_pct.toFixed(1)}%</div>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+              {/* Category breakdown chart */}
+              {(() => {
+                const totalVal = portfolio.holdings.reduce((s, h) => s + h.current_value, 0)
+                const byCategory = {}
+                portfolio.holdings.forEach(h => {
+                  const cat = h.fund_category || 'Other'
+                  byCategory[cat] = (byCategory[cat] || 0) + h.current_value
+                })
+                const catData = Object.entries(byCategory)
+                  .map(([cat, val]) => ({ cat, pct: totalVal > 0 ? (val / totalVal) * 100 : 0 }))
+                  .sort((a, b) => b.pct - a.pct)
+                const catColors = { 'Large Cap': '#1e4fff', 'Flexi Cap': '#7c3aed', 'Mid Cap': '#f97316', 'Small Cap': '#f43f5e', 'Debt': '#0d9488', 'Corporate Bond': '#0d9488', 'Liquid': '#9ca3af', 'ELSS': '#10b981' }
+                return (
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Category Breakdown</div>
+                    <ResponsiveContainer width="100%" height={catData.length * 26 + 8}>
+                      <BarChart data={catData} layout="vertical" margin={{ left: 0, right: 40, top: 0, bottom: 0 }}>
+                        <XAxis type="number" domain={[0, 100]} hide />
+                        <YAxis type="category" dataKey="cat" width={88} tick={{ fontSize: 10, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                        <Tooltip formatter={(v) => [`${v.toFixed(1)}%`]} />
+                        <Bar dataKey="pct" radius={[0, 4, 4, 0]} barSize={14}>
+                          {catData.map(entry => (
+                            <Cell key={entry.cat} fill={catColors[entry.cat] || '#9ca3af'} />
+                          ))}
+                          <LabelList dataKey="pct" position="right" formatter={(v) => `${v.toFixed(1)}%`} style={{ fontSize: 10, fill: '#374151', fontWeight: 600 }} />
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )
+              })()}
+            </div>
+          )}
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-8 text-center">
@@ -475,17 +550,23 @@ export default function Dashboard() {
       {/* ── Goals section ── */}
       {goals.length > 0 && (
         <div>
-          <div className="flex items-center justify-between mb-3">
+          <button
+            onClick={() => setGoalsOpen(o => !o)}
+            className="w-full flex items-center justify-between mb-3"
+          >
             <div className="flex items-center gap-2">
               <Target size={15} className="text-[#1D6FDB]" />
-              <span className="text-sm font-semibold text-gray-900">Your Goals</span>
+              <span className="text-sm font-semibold text-gray-900">Your Goals ({goals.length})</span>
             </div>
-            <Link to="/goals" className="text-xs text-[#1D6FDB] font-medium hover:underline flex items-center gap-0.5">
-              View all <ChevronRight size={13} />
-            </Link>
-          </div>
+            <div className="flex items-center gap-2">
+              <Link to="/goals" onClick={e => e.stopPropagation()} className="text-xs text-[#1D6FDB] font-medium hover:underline flex items-center gap-0.5">
+                View all <ChevronRight size={13} />
+              </Link>
+              <ChevronDown size={14} className={`text-gray-400 transition-transform ${goalsOpen ? 'rotate-180' : ''}`} />
+            </div>
+          </button>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {goalsOpen && <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {goals.slice(0, 4).map(g => (
               <Link
                 key={g.id}
@@ -510,7 +591,7 @@ export default function Dashboard() {
                 </div>
               </Link>
             ))}
-          </div>
+          </div>}
         </div>
       )}
 

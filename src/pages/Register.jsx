@@ -1,11 +1,13 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { Loader2 } from 'lucide-react'
 
 export default function Register() {
   const { register } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const inviteToken = searchParams.get('invite') || null
   const [form, setForm] = useState({ display_name: '', email: '', password: '', referral_code: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -17,7 +19,7 @@ export default function Register() {
     if (form.password.length < 8) { setError('Password must be at least 8 characters.'); return }
     setLoading(true); setError(null)
     try {
-      await register(form.email, form.password, form.display_name, form.referral_code || null)
+      await register(form.email, form.password, form.display_name, form.referral_code || null, inviteToken)
       navigate('/')
     } catch (err) {
       setError(err.response?.data?.detail || 'Registration failed. Please try again.')
@@ -32,7 +34,14 @@ export default function Register() {
         <div className="text-center mb-8">
           <div className="text-xs font-bold text-navy-400 tracking-widest uppercase mb-1">ARIA</div>
           <h1 className="text-2xl font-bold text-gray-900">Create account</h1>
-          <p className="text-sm text-gray-500 mt-1">Start managing your own portfolio</p>
+          <p className="text-sm text-gray-500 mt-1">
+            {inviteToken ? 'Your advisor has invited you to ARIA Personal.' : 'Start managing your own portfolio'}
+          </p>
+          {inviteToken && (
+            <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-[#1D6FDB] text-xs font-semibold rounded-full">
+              ✉️ Invite accepted
+            </div>
+          )}
         </div>
 
         <div className="bg-white rounded-2xl shadow-card p-6">

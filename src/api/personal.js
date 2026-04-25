@@ -29,6 +29,7 @@ export const delinkAdvisor = () => api.post('/personal/auth/delink-advisor').the
 // ─── Portfolio ───────────────────────────────────────────────────────────────
 export const getPortfolio = () => api.get('/personal/portfolio').then(r => r.data)
 export const savePortfolio = (data) => api.post('/personal/portfolio', data).then(r => r.data)
+export const getPortfolioHistory = () => api.get('/personal/portfolio/history').then(r => r.data)
 
 // ─── Goals ───────────────────────────────────────────────────────────────────
 export const getGoals = () => api.get('/personal/goals').then(r => r.data)
