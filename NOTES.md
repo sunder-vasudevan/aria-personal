@@ -72,7 +72,21 @@
 - Unit test fixture for linked_client_and_personal_user not yet created (Layer 2)
 - Full advisor → client workflow manual test done, automated test pending
 
-## Next Session Agenda ← START HERE NEXT SESSION
+## What Shipped (2026-04-25 — Session 42) — Security: Cookie Auth ✅
+
+- `src/api/personal.js`: `withCredentials: true`; localStorage token interceptor removed; `logoutApi()` added; `refreshMyPrices(uid)` takes uid param
+- `src/auth/useAuth.jsx`: `useEffect` calls `getMe()` unconditionally (cookie determines auth state); login/register no longer store token; logout calls `logoutApi()` + server cookie cleared
+- `Dashboard.jsx`: `refreshMyPrices(user?.id)` — uid from auth context, not localStorage
+- **Commit:** 20dfb94 — pushed to origin
+
+## ← START HERE NEXT SESSION
+- **Verify** KYC doc upload returns 200 (not 503) — prod test after Render redeploy
+- **ARIA Personal Dashboard revamp**: KPI bar, section reorder, goal probability bars — plan confirmed, not built
+- **FEAT-503** (aria-advisor): Live goal probability on sliders
+
+---
+
+## Next Session Agenda ← (superseded — see above)
 
 ### 1. Layer 2: Test Fixture — linked_client_and_personal_user
 - Create pytest fixture enforcing two-way portfolio/client linking
@@ -106,6 +120,16 @@
 ### Starter Portfolio Seed ✅
 - All new signups get: 10 stocks + 10 MFs + 5 BTC + 5 ETH + ₹5L cash
 - Kate and Ruben backfilled on next backend restart
+
+## Security Parking Lot (2026-04-18)
+- **NOW — N1:** Audit every FastAPI `/personal/` route: verify `current_user.id == resource.personal_user_id` on portfolio, goals, life-events, trade endpoints (IDOR)
+- **NOW — N2:** Strip cross-user data from Copilot system prompt — never co-mingle context between users
+- **IMMEDIATE — I1:** Move JWT (`aria_personal_token`) from localStorage → `httpOnly` cookie
+- **IMMEDIATE — I2:** Copilot output filter — refuse to echo env vars or system prompt content
+- **IMMEDIATE — I6:** Confirm Supabase service role key is never in frontend bundle
+- **LATER — L1:** Add Supabase RLS as defence-in-depth
+- **LATER — L3:** Pin all dependency versions; add Snyk/npm audit to CI
+- **LATER — L7:** Write SECURITY.md
 
 ## Next Session Agenda
 - FEAT-P001 Portfolio Add/Edit UI (still pending)
